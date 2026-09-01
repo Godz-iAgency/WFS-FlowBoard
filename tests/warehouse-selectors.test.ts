@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dockIndicatorColor, findNearestAvailableSlot, getOperationalSummary, getZoneOccupancy, searchBoard } from "@/lib/warehouse/selectors";
+import { dockIndicatorColor, findNearestAvailableDock, findNearestAvailableSlot, getOperationalSummary, getZoneOccupancy, isPointInsideZone, searchBoard } from "@/lib/warehouse/selectors";
 import type { AssetRow, SlotRow, ZoneRow } from "@/types/database";
 import type { BoardSnapshot, ZoneWithSlots } from "@/types/warehouse";
 
@@ -52,6 +52,16 @@ describe("live board selectors", () => {
     expect(findNearestAvailableSlot({ x: 103, y: 102 }, state.zones, state.assets)?.slot.id).toBe("lane-2");
     expect(findNearestAvailableSlot({ x: 103, y: 102 }, state.zones, state.assets, "asset")?.slot.id).toBe("lane-1");
     expect(findNearestAvailableSlot({ x: 900, y: 900 }, state.zones, state.assets)).toBeNull();
+  });
+
+  it("offers only an available dock and constrains free movement points", () => {
+    const state = snapshot([]);
+    expect(findNearestAvailableDock({ x: 190, y: 50 }, state.zones, state.assets)?.id).toBe("dock");
+    const occupied = asset({ id: "truck", asset_category: "TRUCK", uld_type: null, truck_type: "TRACTOR_TRAILER", zone_id: "dock", slot_id: null });
+    expect(findNearestAvailableDock({ x: 190, y: 50 }, state.zones, [occupied])).toBeNull();
+    expect(findNearestAvailableDock({ x: 190, y: 50 }, state.zones, [occupied], "truck")?.id).toBe("dock");
+    expect(isPointInsideZone({ x: 50, y: 50 }, state.zones[0])).toBe(true);
+    expect(isPointInsideZone({ x: 5, y: 5 }, state.zones[0], 10)).toBe(false);
   });
 
   it("searches live identifiers, destinations, ULD types, and dock codes", () => {

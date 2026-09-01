@@ -9,6 +9,17 @@ export class BoardRepositoryError extends Error {
   }
 }
 
+function throwQueryError(stage: string, message: string, error: { code?: string; message: string; details?: string; hint?: string }): never {
+  console.error("Warehouse snapshot query failed", {
+    stage,
+    code: error.code,
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+  });
+  throw new BoardRepositoryError(message, `${stage}:${error.code ?? "UNKNOWN"}`);
+}
+
 export async function getBoardSnapshot(
   supabase: SupabaseClient<Database>,
   warehouseCode: string,
@@ -17,7 +28,7 @@ export async function getBoardSnapshot(
     supabase.from("warehouses").select("*").eq("code", warehouseCode).maybeSingle(),
     supabase.auth.getClaims(),
   ]);
-  if (warehouseResult.error) throw new BoardRepositoryError("The warehouse could not be loaded.", warehouseResult.error.code);
+  if (warehouseResult.error) throwQueryError("WAREHOUSE", "The warehouse could not be loaded.", warehouseResult.error);
   if (!warehouseResult.data) throw new BoardRepositoryError("You do not have access to this warehouse.", "WAREHOUSE_UNAVAILABLE");
   const userId = claimsResult.data?.claims?.sub;
   if (claimsResult.error || typeof userId !== "string") throw new BoardRepositoryError("Your authenticated session could not be verified.", "SESSION_UNAVAILABLE");
@@ -32,19 +43,20 @@ export async function getBoardSnapshot(
     supabase.from("warehouse_memberships").select("role").eq("warehouse_id", warehouse.id).eq("user_id", userId).maybeSingle(),
   ]);
 
-  if (zoneResult.error) throw new BoardRepositoryError("Warehouse zones could not be loaded.", zoneResult.error.code);
-  if (assetResult.error) throw new BoardRepositoryError("Live warehouse assets could not be loaded.", assetResult.error.code);
-  if (connectionResult.error) throw new BoardRepositoryError("Asset connections could not be loaded.", connectionResult.error.code);
-  if (configurationResult.error) throw new BoardRepositoryError("Saved configurations could not be loaded.", configurationResult.error.code);
-  if (eventResult.error) throw new BoardRepositoryError("Recent warehouse history could not be loaded.", eventResult.error.code);
-  if (membershipResult.error || !membershipResult.data) throw new BoardRepositoryError("Warehouse membership could not be verified.", membershipResult.error?.code);
+  if (zoneResult.error) throwQueryError("ZONES", "Warehouse zones could not be loaded.", zoneResult.error);
+  if (assetResult.error) throwQueryError("LIVE_ASSETS", "Live warehouse assets could not be loaded.", assetResult.error);
+  if (connectionResult.error) throwQueryError("CONNECTIONS", "Asset connections could not be loaded.", connectionResult.error);
+  if (configurationResult.error) throwQueryError("CONFIGURATIONS", "Saved configurations could not be loaded.", configurationResult.error);
+  if (eventResult.error) throwQueryError("EVENTS", "Recent warehouse history could not be loaded.", eventResult.error);
+  if (membershipResult.error) throwQueryError("MEMBERSHIP", "Warehouse membership could not be verified.", membershipResult.error);
+  if (!membershipResult.data) throw new BoardRepositoryError("Warehouse membership could not be verified.", "MEMBERSHIP:NOT_FOUND");
 
   const zoneIds = zoneResult.data.map((zone) => zone.id);
   const slotResult = zoneIds.length
     ? await supabase.from("slots").select("*").in("zone_id", zoneIds).eq("is_active", true).order("slot_number")
     : { data: [], error: null };
 
-  if (slotResult.error) throw new BoardRepositoryError("Warehouse lane slots could not be loaded.", slotResult.error.code);
+  if (slotResult.error) throwQueryError("SLOTS", "Warehouse lane slots could not be loaded.", slotResult.error);
 
   const zones: ZoneWithSlots[] = zoneResult.data.map((zone) => ({
     ...zone,

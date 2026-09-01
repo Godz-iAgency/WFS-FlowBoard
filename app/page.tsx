@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AccessDenied } from "@/components/AccessDenied";
+import { BoardLoadFailure } from "@/components/BoardLoadFailure";
 import { SetupRequired } from "@/components/SetupRequired";
 import { WarehouseApplication } from "@/components/warehouse/WarehouseApplication";
 import { readPublicEnvironment } from "@/lib/env";
@@ -22,6 +23,9 @@ export default async function HomePage() {
   } catch (error) {
     if (error instanceof BoardRepositoryError && error.code === "WAREHOUSE_UNAVAILABLE") {
       return <AccessDenied warehouseCode={environment.data.warehouseCode} />;
+    }
+    if (error instanceof BoardRepositoryError) {
+      return <BoardLoadFailure message={error.message} code={error.code} />;
     }
     throw error;
   }

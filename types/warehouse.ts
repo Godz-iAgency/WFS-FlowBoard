@@ -1,4 +1,4 @@
-import type { AppRole, AssetEventRow, AssetRow, ConfigurationRow, ConnectionRow, SlotRow, WarehouseRow, ZoneRow } from "@/types/database";
+import type { AppRole, AssetEventRow, AssetRow, ConfigurationRow, ConnectionRow, SlotRow, TruckType, UldType, WarehouseRow, ZoneRow } from "@/types/database";
 
 export const LOGICAL_BOARD_WIDTH = 1600;
 export const LOGICAL_BOARD_HEIGHT = 900;
@@ -21,6 +21,16 @@ export interface BoardSnapshot {
 export type RealtimeState = "CONNECTING" | "CONNECTED" | "RECONNECTING" | "OFFLINE" | "ERROR";
 
 export type BoardHighlight = { type: "asset" | "zone"; id: string } | null;
+
+export type AircraftType = "B767" | "B737";
+
+export type PlacementTool =
+  | { category: "ULD"; uldType: UldType }
+  | { category: "TUG" }
+  | { category: "TRUCK"; truckType: TruckType }
+  | { category: "AIRCRAFT"; aircraftType: AircraftType };
+
+export type ClientPoint = { x: number; y: number };
 
 export interface BoardLoadError {
   title: string;

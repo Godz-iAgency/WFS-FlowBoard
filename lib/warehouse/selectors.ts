@@ -49,6 +49,34 @@ export function getDockTruck(zoneId: string, assets: AssetRow[]): AssetRow | und
   return assets.find((asset) => asset.is_active && asset.asset_category === "TRUCK" && asset.zone_id === zoneId);
 }
 
+export function findNearestAvailableDock(
+  position: { x: number; y: number },
+  zones: ZoneWithSlots[],
+  assets: AssetRow[],
+  ignoredAssetId?: string,
+  maximumDistance = 170,
+): ZoneWithSlots | null {
+  let nearest: { zone: ZoneWithSlots; distance: number } | null = null;
+  for (const zone of zones) {
+    if (zone.zone_type !== "DOCK") continue;
+    const occupied = assets.some((asset) =>
+      asset.is_active && asset.asset_category === "TRUCK" && asset.zone_id === zone.id && asset.id !== ignoredAssetId,
+    );
+    if (occupied) continue;
+    const target = { x: zone.x + zone.width + 92, y: zone.y + zone.height / 2 };
+    const distance = Math.hypot(target.x - position.x, target.y - position.y);
+    if (distance <= maximumDistance && (!nearest || distance < nearest.distance)) nearest = { zone, distance };
+  }
+  return nearest?.zone ?? null;
+}
+
+export function isPointInsideZone(position: { x: number; y: number }, zone: ZoneWithSlots, margin = 0): boolean {
+  return position.x >= zone.x + margin
+    && position.x <= zone.x + zone.width - margin
+    && position.y >= zone.y + margin
+    && position.y <= zone.y + zone.height - margin;
+}
+
 export function dockIndicatorColor(truck: AssetRow | undefined): string {
   if (!truck) return "#8b98a5";
   if (truck.truck_status === "COMPLETE") return "#ef8d22";

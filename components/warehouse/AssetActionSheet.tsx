@@ -20,6 +20,7 @@ export function AssetActionSheet({
   onTruckStatus,
   onRequestDepart,
   onRequestRemove,
+  onRequestConnect,
   onDisconnect,
 }: {
   asset: AssetRow;
@@ -32,6 +33,7 @@ export function AssetActionSheet({
   onTruckStatus: (asset: AssetRow, status: TruckStatus) => void;
   onRequestDepart: (asset: AssetRow) => void;
   onRequestRemove: (asset: AssetRow) => void;
+  onRequestConnect: (asset: AssetRow) => void;
   onDisconnect: (connection: ConnectionRow) => void;
 }) {
   const [showDetails, setShowDetails] = useState(false);
@@ -81,6 +83,7 @@ export function AssetActionSheet({
           {asset.asset_category === "TRUCK" ? <button type="button" onClick={() => onTruckStatus(asset, "UNLOADING")} disabled={busy}>Unloading</button> : null}
           {asset.asset_category === "TRUCK" ? <button type="button" onClick={() => onTruckStatus(asset, "COMPLETE")} disabled={busy}>Complete</button> : null}
           {asset.asset_category === "TRUCK" ? <button type="button" className="action-depart" onClick={() => onRequestDepart(asset)} disabled={busy}>Depart</button> : null}
+          {asset.asset_category === "TUG" && !connection ? <button type="button" onClick={() => onRequestConnect(asset)} disabled={busy}>Connect ULD</button> : null}
           {asset.asset_category === "TUG" && connection ? <button type="button" onClick={() => onDisconnect(connection)} disabled={busy}>Disconnect</button> : null}
           {!connection ? <button type="button" className="action-remove" onClick={() => onRequestRemove(asset)} disabled={busy}>Remove</button> : null}
           <button type="button" onClick={onClose}>Cancel</button>

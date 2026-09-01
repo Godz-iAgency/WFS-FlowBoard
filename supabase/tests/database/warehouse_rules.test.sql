@@ -1,6 +1,26 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(24);
+
+select ok(
+  has_table_privilege('authenticated', 'public.warehouses', 'SELECT'),
+  'authenticated users can read warehouses through the Data API'
+);
+
+select ok(
+  has_table_privilege('authenticated', 'public.live_assets', 'SELECT'),
+  'authenticated users can read the live asset projection'
+);
+
+select ok(
+  not has_table_privilege('authenticated', 'public.assets', 'INSERT'),
+  'authenticated users cannot bypass audited asset mutation RPCs'
+);
+
+select ok(
+  not has_table_privilege('anon', 'public.warehouses', 'SELECT'),
+  'anonymous users cannot read warehouse data'
+);
 
 select is(
   (select count(*)::integer from public.slots slot join public.zones zone on zone.id = slot.zone_id where zone.code in ('LANE_2','LANE_3','LANE_4','LANE_5')),
@@ -11,6 +31,68 @@ select is(
   (select count(*)::integer from public.slots slot join public.zones zone on zone.id = slot.zone_id where zone.code = 'MIXED'),
   2,
   'Mixed Area contains exactly two explicit slots'
+);
+
+select ok(
+  (
+    select lower_right.y - (dock_15.y + dock_15.height) >= 15
+    from public.zones dock_15
+    cross join lateral (
+      select min(y) as y
+      from public.zones
+      where warehouse_id = dock_15.warehouse_id
+        and code in ('CONTROL_OFFICE', 'RUNNERS_AREA')
+    ) lower_right
+    where dock_15.code = 'DD15'
+  ),
+  'Dock 15 retains a visible clearance gap above the lower-right structures'
+);
+
+select ok(
+  (
+    select mod_table.x + mod_table.width <= dock_15.x
+    from public.zones mod_table
+    join public.zones dock_15 on dock_15.warehouse_id = mod_table.warehouse_id
+    where mod_table.code = 'MOD_TABLE' and dock_15.code = 'DD15'
+  ),
+  'MOD Table remains left of the Dock 15 approach'
+);
+
+select ok(
+  (
+    select runners.x + runners.width < dock_15.x + dock_15.width + 16
+    from public.zones runners
+    join public.zones dock_15 on dock_15.warehouse_id = runners.warehouse_id
+    where runners.code = 'RUNNERS_AREA' and dock_15.code = 'DD15'
+  ),
+  'Runners Area remains left of the Dock 15 truck target'
+);
+
+select is(
+  (
+    select count(distinct y)::integer
+    from public.zones
+    where warehouse_id = '10000000-0000-0000-0000-000000000001'
+      and code in ('PROBLEM_SOLVE', 'MIXED', 'MOD_TABLE', 'CONTROL_OFFICE', 'RUNNERS_AREA')
+  ),
+  1,
+  'all lower warehouse sections share one aligned top edge'
+);
+
+select is(
+  (select code from public.zones where id = '20000000-0000-0000-0000-000000000202'),
+  'PROBLEM_SOLVE',
+  'the former Inventory area is now the Problem Solve area'
+);
+
+select ok(
+  (
+    select bool_and(slot.x - 39 >= zone.x and slot.x + 39 <= zone.x + zone.width and slot.y - 30 >= zone.y and slot.y + 30 <= zone.y + zone.height)
+    from public.slots slot
+    join public.zones zone on zone.id = slot.zone_id
+    where zone.code = 'MIXED'
+  ),
+  'both Mixed Area ULD images remain fully inside the dashed boundary'
 );
 
 select throws_like(
@@ -29,6 +111,23 @@ select throws_like(
   )$$,
   '%TRUCK assets may only be placed in DOCK zones%',
   'database rejects a truck in a lane'
+);
+
+select throws_like(
+  $$insert into public.assets (warehouse_id, asset_category, zone_id, x_position, y_position) values (
+    '10000000-0000-0000-0000-000000000001', 'TUG',
+    '20000000-0000-0000-0000-000000000002', 570, 349
+  )$$,
+  '%TUG assets may only be placed in the FREE_MOVEMENT zone%',
+  'database rejects a tug in a ULD lane'
+);
+
+select lives_ok(
+  $$insert into public.assets (warehouse_id, asset_category, zone_id, x_position, y_position) values (
+    '10000000-0000-0000-0000-000000000001', 'TUG',
+    '20000000-0000-0000-0000-000000000208', 700, 600
+  )$$,
+  'database accepts a free-positioned tug inside the movement zone'
 );
 
 select throws_like(
@@ -52,8 +151,11 @@ select throws_like(
   'database permits only one active asset per slot'
 );
 
-insert into public.assets (id, warehouse_id, asset_category, x_position, y_position)
-values ('40000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'TUG', 700, 600);
+insert into public.assets (id, warehouse_id, asset_category, zone_id, x_position, y_position)
+values (
+  '40000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'TUG',
+  '20000000-0000-0000-0000-000000000208', 700, 600
+);
 insert into public.assets (id, warehouse_id, asset_category, truck_type, zone_id)
 values ('40000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', 'TRUCK', 'TRACTOR_TRAILER', '20000000-0000-0000-0000-000000000106');
 

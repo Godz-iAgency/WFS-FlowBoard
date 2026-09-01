@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AssetRow, ConfigurationRow, ConnectionRow, Database, Json, TruckStatus } from "@/types/database";
+import type { AssetCategory, AssetRow, ConfigurationRow, ConnectionRow, Database, Json, TruckStatus, TruckType, UldType } from "@/types/database";
 
 export class WarehouseMutationError extends Error {
   constructor(message: string, readonly stale: boolean) {
@@ -19,6 +19,37 @@ function mutationFailure(message: string): WarehouseMutationError {
         : message,
     stale,
   );
+}
+
+export async function createAsset(
+  supabase: SupabaseClient<Database>,
+  input: {
+    warehouseId: string;
+    category: AssetCategory;
+    uldType?: UldType | null;
+    truckType?: TruckType | null;
+    zoneId: string;
+    slotId?: string | null;
+    x?: number | null;
+    y?: number | null;
+    orientationDegrees?: number;
+  },
+): Promise<AssetRow> {
+  const { data, error } = await supabase.rpc("create_asset", {
+    p_warehouse_id: input.warehouseId,
+    p_asset_category: input.category,
+    p_uld_type: input.uldType ?? null,
+    p_truck_type: input.truckType ?? null,
+    p_external_identifier: null,
+    p_destination: null,
+    p_zone_id: input.zoneId,
+    p_slot_id: input.slotId ?? null,
+    p_x_position: input.x ?? null,
+    p_y_position: input.y ?? null,
+    p_orientation_degrees: input.orientationDegrees ?? 0,
+  });
+  if (error) throw mutationFailure(error.message);
+  return data;
 }
 
 export async function moveAsset(
@@ -93,6 +124,21 @@ export async function disconnectTow(
   const { data, error } = await supabase.rpc("disconnect_tow", {
     p_connection_id: connection.id,
     p_expected_version: connection.version,
+  });
+  if (error) throw mutationFailure(error.message);
+  return data;
+}
+
+export async function connectTow(
+  supabase: SupabaseClient<Database>,
+  tug: Pick<AssetRow, "id" | "version">,
+  uld: Pick<AssetRow, "id" | "version">,
+): Promise<ConnectionRow> {
+  const { data, error } = await supabase.rpc("connect_tug_to_uld", {
+    p_tug_id: tug.id,
+    p_tug_expected_version: tug.version,
+    p_uld_id: uld.id,
+    p_uld_expected_version: uld.version,
   });
   if (error) throw mutationFailure(error.message);
   return data;
