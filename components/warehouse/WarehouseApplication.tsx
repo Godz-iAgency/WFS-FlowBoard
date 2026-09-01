@@ -14,6 +14,7 @@ import { HistoryPanel } from "@/components/warehouse/HistoryPanel";
 import { RealtimeStatus } from "@/components/warehouse/RealtimeStatus";
 import { SearchPanel } from "@/components/warehouse/SearchPanel";
 import { WarehouseBoard } from "@/components/warehouse/WarehouseBoard";
+import { WarehouseAssistant } from "@/components/warehouse/WarehouseAssistant";
 import { useWarehouseRealtime } from "@/hooks/useWarehouseRealtime";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -43,6 +44,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ message: string; error: boolean } | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
@@ -393,7 +395,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
         </div>
       ) : null}
 
-      <BoardToolbar snapshot={snapshot} busy={busy} canManageConfigurations={canManageConfigurations} onUndo={handleUndo} onSearch={() => setSearchOpen(true)} onSave={() => setSaveOpen(true)} onLoad={() => setLoadOpen(true)} onHistory={() => setHistoryOpen(true)} />
+      <BoardToolbar snapshot={snapshot} busy={busy} canManageConfigurations={canManageConfigurations} onUndo={handleUndo} onSearch={() => setSearchOpen(true)} onAssistant={() => setAssistantOpen(true)} onSave={() => setSaveOpen(true)} onLoad={() => setLoadOpen(true)} onHistory={() => setHistoryOpen(true)} />
 
       <div className="workspace">
         <ElementsPanel zones={snapshot.zones} assets={snapshot.assets} selectedTool={placementTool} onSelectTool={choosePlacementTool} onClearTool={clearPlacementTool} onDragPreview={updateDragPreview} onDropTool={handlePaletteDrop} />
@@ -422,6 +424,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
       {selectedAsset ? <AssetActionSheet asset={selectedAsset} zone={selectedZone} connection={selectedConnection} busy={busy} onClose={() => setSelectedAssetId(null)} onRotate={handleRotate} onDestination={handleDestination} onTruckStatus={handleTruckStatus} onRequestDepart={requestDepart} onRequestRemove={requestRemove} onRequestConnect={(asset) => setConnectingTugId(asset.id)} onDisconnect={handleDisconnect} /> : null}
       {connectingTug ? <ConnectTugDialog tug={connectingTug} ulds={connectableUlds} zones={snapshot.zones} busy={busy} onClose={() => setConnectingTugId(null)} onConnect={(tug, uld) => void handleConnect(tug, uld)} /> : null}
       {searchOpen ? <SearchPanel snapshot={snapshot} onClose={() => setSearchOpen(false)} onLocate={handleLocate} /> : null}
+      {assistantOpen ? <WarehouseAssistant onClose={() => setAssistantOpen(false)} /> : null}
       {historyOpen ? <HistoryPanel snapshot={snapshot} onClose={() => setHistoryOpen(false)} /> : null}
       {saveOpen ? <SaveBoardDialog busy={busy} onClose={() => setSaveOpen(false)} onSave={(name, description) => void handleSave(name, description)} /> : null}
       {loadOpen ? <LoadConfigurationDialog configurations={snapshot.configurations} onClose={() => setLoadOpen(false)} onChoose={requestConfigurationLoad} /> : null}

@@ -10,6 +10,7 @@ export function BoardToolbar({
   canManageConfigurations,
   onUndo,
   onSearch,
+  onAssistant,
   onSave,
   onLoad,
   onHistory,
@@ -19,6 +20,7 @@ export function BoardToolbar({
   canManageConfigurations: boolean;
   onUndo: () => void;
   onSearch: () => void;
+  onAssistant: () => void;
   onSave: () => void;
   onLoad: () => void;
   onHistory: () => void;
@@ -32,6 +34,7 @@ export function BoardToolbar({
           <span aria-hidden="true">↶</span> Undo
         </button>
         <button className="toolbar-button" type="button" onClick={onSearch}><span aria-hidden="true">⌕</span> Search</button>
+        <button className="toolbar-button toolbar-button--assistant" type="button" onClick={onAssistant}><span aria-hidden="true">✦</span> Ask Agent</button>
         <button className="toolbar-button" type="button" onClick={onHistory}><span aria-hidden="true">≡</span> History</button>
         {canManageConfigurations ? <button className="toolbar-button" type="button" onClick={onSave}>Save Board</button> : null}
         {canManageConfigurations ? <button className="toolbar-button" type="button" onClick={onLoad}>Load Configuration</button> : null}

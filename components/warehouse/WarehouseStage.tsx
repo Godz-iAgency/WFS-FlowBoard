@@ -252,6 +252,12 @@ function StaticZone({ zone, image }: { zone: ZoneWithSlots; image: HTMLImageElem
         <Line points={[sectionRight, sectionBottom - 42, sectionRight - doorwayInset, sectionBottom - 42]} stroke="#203649" strokeWidth={4} />
         <Line points={[sectionRight - doorwayInset, sectionBottom - 42, sectionRight - doorwayInset, sectionBottom]} stroke="#203649" strokeWidth={4} />
         <Line points={[sectionRight - doorwayInset, sectionBottom, sectionLeft, sectionBottom]} stroke="#203649" strokeWidth={4} />
+        <Group x={zone.x + zone.width / 2 - 25} y={zone.y + 132}>
+          <Rect x={0} y={0} width={50} height={34} fill="rgba(255,255,255,.82)" stroke={NAVY} strokeWidth={2} cornerRadius={3} />
+          <Line points={[1, 2, 25, 20, 49, 2]} stroke={NAVY} strokeWidth={2} lineJoin="round" />
+          <Line points={[1, 32, 18, 17]} stroke={NAVY} strokeWidth={1.5} />
+          <Line points={[49, 32, 32, 17]} stroke={NAVY} strokeWidth={1.5} />
+        </Group>
         <Text x={sectionLeft + 8} y={zone.y + 178} width={sectionRight - sectionLeft - 16} text="ALL MAIL" fill="#151515" fontSize={18} fontStyle="bold" align="center" />
       </Group>
     );
@@ -275,15 +281,15 @@ function StaticZone({ zone, image }: { zone: ZoneWithSlots; image: HTMLImageElem
       </Group>
     );
   }
-  if (zone.code === "MOD_TABLE") {
+  if (zone.code === "MOD_DESK" || zone.code === "MOD_TABLE") {
     return (
       <Group listening={false}>
         <Rect x={zone.x} y={zone.y} width={zone.width} height={zone.height} fill="rgba(255,255,255,.46)" stroke={NAVY} strokeWidth={2} cornerRadius={3} />
-        <Text x={zone.x + 4} y={zone.y + 6} width={zone.width - 8} text="MOD TABLE" fill={NAVY} fontSize={13} fontStyle="bold" align="center" />
-        <Rect x={zone.x + 25} y={zone.y + 26} width={zone.width - 50} height={24} fill="#f8fbfe" stroke={NAVY} strokeWidth={2} />
-        <Line points={[zone.x + 25, zone.y + 34, zone.x + zone.width - 25, zone.y + 34]} stroke={NAVY} strokeWidth={1} />
-        <Line points={[zone.x + 25, zone.y + 42, zone.x + zone.width - 25, zone.y + 42]} stroke={NAVY} strokeWidth={1} />
-        <Line points={[zone.x + zone.width / 2, zone.y + 26, zone.x + zone.width / 2, zone.y + 50]} stroke={NAVY} strokeWidth={1} />
+        <Text x={zone.x + 4} y={zone.y + 5} width={zone.width - 8} text="MOD DESK" fill={NAVY} fontSize={12} fontStyle="bold" align="center" />
+        <Rect x={zone.x + 13} y={zone.y + 25} width={zone.width - 26} height={16} fill="#d9b474" stroke={NAVY} strokeWidth={2} cornerRadius={2} />
+        <Line points={[zone.x + 18, zone.y + 41, zone.x + 18, zone.y + 49]} stroke={NAVY} strokeWidth={2} />
+        <Line points={[zone.x + zone.width - 18, zone.y + 41, zone.x + zone.width - 18, zone.y + 49]} stroke={NAVY} strokeWidth={2} />
+        <Rect x={zone.x + zone.width / 2 - 8} y={zone.y + 43} width={16} height={9} fill="#eef4f8" stroke={NAVY} strokeWidth={1.5} cornerRadius={4} />
       </Group>
     );
   }

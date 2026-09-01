@@ -50,12 +50,12 @@ select ok(
 
 select ok(
   (
-    select mod_table.x + mod_table.width <= dock_15.x
-    from public.zones mod_table
-    join public.zones dock_15 on dock_15.warehouse_id = mod_table.warehouse_id
-    where mod_table.code = 'MOD_TABLE' and dock_15.code = 'DD15'
+    select mod_desk.x + mod_desk.width <= dock_15.x
+    from public.zones mod_desk
+    join public.zones dock_15 on dock_15.warehouse_id = mod_desk.warehouse_id
+    where mod_desk.code = 'MOD_DESK' and dock_15.code = 'DD15'
   ),
-  'MOD Table remains left of the Dock 15 approach'
+  'MOD Desk remains left of the Dock 15 approach'
 );
 
 select ok(
@@ -73,7 +73,7 @@ select is(
     select count(distinct y)::integer
     from public.zones
     where warehouse_id = '10000000-0000-0000-0000-000000000001'
-      and code in ('PROBLEM_SOLVE', 'MIXED', 'MOD_TABLE', 'CONTROL_OFFICE', 'RUNNERS_AREA')
+      and code in ('PROBLEM_SOLVE', 'MIXED', 'MOD_DESK', 'CONTROL_OFFICE', 'RUNNERS_AREA')
   ),
   1,
   'all lower warehouse sections share one aligned top edge'

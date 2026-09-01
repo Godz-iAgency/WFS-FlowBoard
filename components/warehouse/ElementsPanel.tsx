@@ -110,9 +110,16 @@ export function ElementsPanel({ zones, assets, selectedTool, onSelectTool, onCle
   const capacities = zones.filter((zone) => zone.zone_type === "LANE" || zone.zone_type === "MIXED");
   const [activeUld, setActiveUld] = useState<UldType>("AAX");
   const [activeEquipment, setActiveEquipment] = useState<EquipmentTool>({ category: "TUG" });
+  const equipmentPreview = useRef<HTMLDivElement>(null);
   const displayedUld = selectedTool?.category === "ULD" ? selectedTool.uldType : activeUld;
   const displayedEquipment = selectedTool && selectedTool.category !== "ULD" ? selectedTool : activeEquipment;
   const activeUldTool: PlacementTool = { category: "ULD", uldType: displayedUld };
+
+  function chooseEquipment(tool: EquipmentTool) {
+    setActiveEquipment(tool);
+    onSelectTool(tool);
+    window.requestAnimationFrame?.(() => equipmentPreview.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" }));
+  }
 
   return (
     <aside className="elements-panel" aria-label="Warehouse elements">
@@ -154,17 +161,19 @@ export function ElementsPanel({ zones, assets, selectedTool, onSelectTool, onCle
               const key = toolKey(tool);
               const selected = toolKey(displayedEquipment) === key;
               return (
-                <button key={key} type="button" className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => { setActiveEquipment(tool); onSelectTool(tool); }}>
+                <button key={key} type="button" className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => chooseEquipment(tool)}>
                   {equipmentLabel(tool)}
                 </button>
               );
             })}
           </div>
-          <PaletteButton tool={displayedEquipment} className={`asset-preview asset-preview--equipment ${selectedTool && toolKey(selectedTool) === toolKey(displayedEquipment) ? "selected" : ""}`} pressed={selectedTool ? toolKey(selectedTool) === toolKey(displayedEquipment) : false} onSelect={onSelectTool} onDragPreview={onDragPreview} onDropTool={onDropTool}>
-            <ApprovedAssetSprite tool={displayedEquipment} />
-            <strong>{equipmentLabel(displayedEquipment)}</strong>
-          </PaletteButton>
-          <span className="asset-preview-help">Drag this image to its highlighted target</span>
+          <div ref={equipmentPreview} className="equipment-preview-wrap">
+            <PaletteButton tool={displayedEquipment} className={`asset-preview asset-preview--equipment ${selectedTool && toolKey(selectedTool) === toolKey(displayedEquipment) ? "selected" : ""}`} pressed={selectedTool ? toolKey(selectedTool) === toolKey(displayedEquipment) : false} onSelect={onSelectTool} onDragPreview={onDragPreview} onDropTool={onDropTool}>
+              <ApprovedAssetSprite tool={displayedEquipment} />
+              <strong>{equipmentLabel(displayedEquipment)}</strong>
+            </PaletteButton>
+            <span className="asset-preview-help">Drag this image to its highlighted target</span>
+          </div>
         </div>
 
         <p className="foundation-note">Static layout locked • live state from Supabase</p>
