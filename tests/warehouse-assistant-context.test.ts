@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWarehouseAssistantContext, buildWarehouseAssistantInput } from "@/lib/warehouse/assistant-context";
+import { buildWarehouseAssistantContext, buildWarehouseAssistantInput, WAREHOUSE_ASSISTANT_INSTRUCTION } from "@/lib/warehouse/assistant-context";
 import type { AssetRow, SlotRow } from "@/types/database";
 import type { BoardSnapshot, ZoneWithSlots } from "@/types/warehouse";
 
@@ -48,5 +48,7 @@ describe("warehouse assistant context", () => {
     expect(JSON.stringify(context)).not.toContain("secret-slot-id");
     expect(JSON.stringify(context)).not.toContain("secret-user-id");
     expect(buildWarehouseAssistantInput("Where is AKE?", [], context)).toContain("AUTHORIZED LIVE FLOWBOARD DATA");
+    expect(WAREHOUSE_ASSISTANT_INSTRUCTION).toContain("third- to fifth-grade reading level");
+    expect(WAREHOUSE_ASSISTANT_INSTRUCTION).toContain("plain text only");
   });
 });

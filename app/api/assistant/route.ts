@@ -2,6 +2,7 @@ import { z } from "zod";
 import { readPublicEnvironment } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { buildWarehouseAssistantContext, buildWarehouseAssistantInput, WAREHOUSE_ASSISTANT_INSTRUCTION } from "@/lib/warehouse/assistant-context";
+import { normalizeWarehouseAssistantAnswer } from "@/lib/warehouse/assistant-response";
 import { BoardRepositoryError, getBoardSnapshot } from "@/lib/warehouse/repository";
 
 export const runtime = "nodejs";
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
         input: buildWarehouseAssistantInput(parsed.data.message, parsed.data.history, context),
         system_instruction: WAREHOUSE_ASSISTANT_INSTRUCTION,
         store: false,
-        generation_config: { thinking_level: "low", max_output_tokens: 700 },
+        generation_config: { thinking_level: "low", max_output_tokens: 500 },
       }),
       signal: AbortSignal.timeout(25_000),
       cache: "no-store",
@@ -108,7 +109,7 @@ export async function POST(request: Request) {
     }
     const answer = extractGeminiText(payload);
     if (!answer) return Response.json({ error: "The FlowBoard agent returned no answer. Please try again." }, { status: 502 });
-    return Response.json({ answer, snapshotTime: snapshot.fetchedAt });
+    return Response.json({ answer: normalizeWarehouseAssistantAnswer(answer), snapshotTime: snapshot.fetchedAt });
   } catch (error) {
     if (error instanceof BoardRepositoryError) {
       const status = error.code?.startsWith("SESSION") ? 401 : error.code?.startsWith("MEMBERSHIP") || error.code === "WAREHOUSE_UNAVAILABLE" ? 403 : 503;
