@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/auth/actions";
+import { GodziCredit } from "@/components/GodziCredit";
 import { AssetActionSheet } from "@/components/warehouse/AssetActionSheet";
 import { AssetPlacementDialog } from "@/components/warehouse/AssetPlacementDialog";
 import { BoardToolbar } from "@/components/warehouse/BoardToolbar";
@@ -391,7 +392,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
         </div>
         <div className="header-actions">
           <RealtimeStatus state={state} lastSyncedAt={snapshot.fetchedAt} />
-          <div className="user-menu"><span className="user-email" title={userEmail}>{userEmail}</span><form action={signOut}><button type="submit" className="text-button">Sign out</button></form></div>
+          <div className="user-menu"><span className="user-email" title={userEmail}>{userEmail}</span><GodziCredit variant="header" /><form action={signOut}><button type="submit" className="text-button">Sign out</button></form></div>
         </div>
       </header>
 

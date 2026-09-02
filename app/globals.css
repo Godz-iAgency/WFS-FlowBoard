@@ -40,6 +40,15 @@ button { min-height: 44px; }
 .user-menu { display: flex; align-items: center; gap: 10px; }
 .user-email { max-width: 190px; font-size: 13px; color: #dce9f6; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .user-menu form { margin: 0; }
+.godzi-credit { display: inline-flex; align-items: center; gap: 8px; color: var(--navy-950); }
+.godzi-credit__mark { position: relative; display: block; flex: 0 0 auto; width: 40px; height: 40px; overflow: hidden; border-radius: 50%; background: white; }
+.godzi-credit__mark img { position: absolute; width: 74px; max-width: none; height: 74px; left: -17px; top: -10px; }
+.godzi-credit__copy { min-width: 0; display: flex; flex-direction: column; line-height: 1; white-space: nowrap; }
+.godzi-credit__copy small { margin-bottom: 3px; color: #5e6f80; font-size: 9px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.godzi-credit__copy strong { color: #231d20; font-size: 15px; font-weight: 900; letter-spacing: .03em; }
+.godzi-credit--header { min-height: 44px; padding: 3px 9px 3px 5px; border: 1px solid rgba(255,255,255,.3); border-radius: 9px; background: rgba(255,255,255,.96); box-shadow: 0 4px 12px rgba(0,0,0,.16); }
+.godzi-credit--header .godzi-credit__mark { width: 34px; height: 34px; }
+.godzi-credit--header .godzi-credit__mark img { width: 63px; height: 63px; left: -15px; top: -9px; }
 .text-button { color: white; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.08); border-radius: 8px; padding: 0 13px; cursor: pointer; font-weight: 700; }
 .text-button:hover, .text-button:focus-visible { background: rgba(255,255,255,.18); }
 
@@ -198,9 +207,14 @@ button { min-height: 44px; }
 .operation-toast { position: fixed; z-index: 30; left: 50%; bottom: 24px; transform: translateX(-50%); width: max-content; max-width: min(680px, calc(100% - 30px)); padding: 14px 20px; border: 1px solid #227a4c; border-radius: 10px; background: #e8f7ef; color: #145f39; box-shadow: 0 12px 35px rgba(0,20,40,.25); font-weight: 750; text-align: center; }.operation-toast--error { border-color: #b8363c; background: #ffeced; color: #8e1d23; }
 
 .login-page { min-height: 100dvh; display: grid; grid-template-columns: minmax(320px, 1.1fr) minmax(360px, .9fr); background: var(--navy-950); }
-.login-brand { padding: clamp(40px, 7vw, 110px); display: flex; flex-direction: column; justify-content: center; color: white; background: radial-gradient(circle at 23% 30%, #14518b 0, #062a55 35%, #031c38 75%); }
+.login-brand { padding: clamp(40px, 7vw, 110px); display: flex; flex-direction: column; justify-content: flex-start; color: white; background: radial-gradient(circle at 23% 30%, #14518b 0, #062a55 35%, #031c38 75%); }
+.login-brand__content { margin-block: auto; }
 .wfs-logo--login { width: clamp(210px, 24vw, 340px); padding: 14px 18px; border-radius: 14px; box-shadow: 0 14px 36px rgba(0,0,0,.18); }
-.login-brand .eyebrow { margin-top: 28px; }.login-brand h1 { margin: 8px 0 16px; font-size: clamp(38px, 5vw, 72px); line-height: .98; max-width: 680px; }.login-brand > p:last-child { max-width: 560px; color: #c8d9ea; font-size: clamp(16px, 1.5vw, 22px); line-height: 1.5; }
+.login-brand .eyebrow { margin-top: 28px; }.login-brand h1 { margin: 8px 0 16px; font-size: clamp(38px, 5vw, 72px); line-height: .98; max-width: 680px; }.login-brand__content > p:last-child { max-width: 560px; color: #c8d9ea; font-size: clamp(16px, 1.5vw, 22px); line-height: 1.5; }
+.godzi-credit--login { width: fit-content; min-height: 58px; margin-top: 36px; padding: 8px 15px 8px 9px; border: 1px solid rgba(255,255,255,.4); border-radius: 12px; background: rgba(255,255,255,.96); box-shadow: 0 12px 30px rgba(0,0,0,.2); }
+.godzi-credit--login .godzi-credit__mark { width: 42px; height: 42px; }
+.godzi-credit--login .godzi-credit__copy small { font-size: 10px; }
+.godzi-credit--login .godzi-credit__copy strong { font-size: 19px; }
 .eyebrow { color: #df2730; font-size: 12px; font-weight: 900; letter-spacing: .15em; }
 .login-card { align-self: center; width: min(440px, calc(100% - 48px)); margin: 24px auto; padding: clamp(28px, 4vw, 48px); border-radius: 18px; background: white; box-shadow: 0 28px 80px rgba(0,0,0,.32); }
 .login-card h2 { margin: 4px 0 28px; color: var(--navy-900); font-size: clamp(24px, 2.2vw, 34px); }
@@ -232,6 +246,10 @@ button { min-height: 44px; }
   .wfs-logo--header { display: block; width: 78px; padding: 3px 5px; }
   .app-brand { gap: 9px; }.app-brand p { font-size: 8px; }.app-brand h1 { font-size: clamp(14px, 1.8vw, 19px); }
   .header-actions { gap: 8px; }.realtime-status { min-height: 40px; padding-inline: 10px; }.text-button { min-height: 40px; padding-inline: 10px; }
+  .godzi-credit--header { min-height: 40px; padding-right: 7px; gap: 6px; }
+  .godzi-credit--header .godzi-credit__mark { width: 30px; height: 30px; }
+  .godzi-credit--header .godzi-credit__mark img { width: 56px; height: 56px; left: -13px; top: -8px; }
+  .godzi-credit--header .godzi-credit__copy small { font-size: 7px; }.godzi-credit--header .godzi-credit__copy strong { font-size: 12px; }
   .user-email { display: none; }
   .board-toolbar { padding: 6px 8px 0; gap: 7px; align-items: flex-start; }
   .toolbar-actions { flex-wrap: nowrap; gap: 5px; min-width: 0; overflow: visible; }
@@ -289,6 +307,9 @@ button { min-height: 44px; }
 @media (max-height: 680px) {
   .app-header { min-height: 48px; }.wfs-logo--header { width: 64px; }.app-brand p { display: none; }
   .realtime-status, .text-button { min-height: 34px; }.realtime-status { padding-inline: 9px; }
+  .godzi-credit--header { min-height: 34px; padding-block: 2px; }
+  .godzi-credit--header .godzi-credit__mark { width: 26px; height: 26px; }
+  .godzi-credit--header .godzi-credit__mark img { width: 49px; height: 49px; left: -12px; top: -7px; }
   .board-toolbar { padding-top: 4px; }.toolbar-button, .operational-summary { min-height: 36px; }.toolbar-button { padding-inline: 8px; }
   .toolbar-compass { width: 36px; height: 36px; flex-basis: 36px; }
   .toolbar-compass > span { display: none; }.toolbar-compass svg { width: 20px; height: 29px; }
@@ -320,8 +341,10 @@ button { min-height: 44px; }
 }
 
 @media (max-width: 680px) {
-  .login-page { display: block; padding: 24px 0; }.login-brand { padding: 28px 24px; background: transparent; }.wfs-logo--login { width: 190px; padding: 9px 12px; }.login-brand h1 { font-size: 34px; }.login-brand > p:last-child { display: none; }.login-card { margin-top: 0; }
+  .login-page { display: block; padding: 24px 0; }.login-brand { padding: 28px 24px; background: transparent; }.login-brand__content { margin: 0; }.wfs-logo--login { width: 190px; padding: 9px 12px; }.login-brand h1 { font-size: 34px; }.login-brand__content > p:last-child { display: none; }.godzi-credit--login { margin-top: 24px; }.login-card { margin-top: 0; }
   .header-actions { gap: 7px; }.text-button { padding: 0 9px; }.connection-banner { justify-content: space-between; padding: 7px 10px; font-size: 12px; }
+  .godzi-credit--header { width: 38px; min-width: 38px; padding: 3px; justify-content: center; }
+  .godzi-credit--header .godzi-credit__copy { display: none; }
   .board-footer span:nth-child(2) { display: none; }
   .toolbar-actions { flex-wrap: nowrap; min-width: 0; overflow: hidden; }.toolbar-button { flex: 0 1 auto; padding-inline: 7px; }.operational-summary { min-width: 120px; }.asset-actions { grid-template-columns: 1fr 1fr; }.asset-action-sheet { right: 8px; bottom: 8px; width: calc(100% - 16px); }.modal-backdrop { padding: 8px; }.modal-card { padding: 18px; }.realtime-status time { display: none; }
   .placement-options--uld { grid-template-columns: repeat(2, minmax(0, 1fr)); }
