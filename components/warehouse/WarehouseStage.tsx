@@ -285,7 +285,18 @@ function StaticZone({ zone, image }: { zone: ZoneWithSlots; image: HTMLImageElem
     return (
       <Group listening={false}>
         <Rect x={zone.x} y={zone.y} width={zone.width} height={zone.height} fill="rgba(255,255,255,.46)" stroke={NAVY} strokeWidth={2} cornerRadius={3} />
-        <Text x={zone.x + 4} y={zone.y + 5} width={zone.width - 8} text="MOD DESK" fill={NAVY} fontSize={12} fontStyle="bold" align="center" />
+        <Text
+          x={zone.x + 2}
+          y={zone.y + 5}
+          width={zone.width - 4}
+          height={14}
+          text="MOD DESK"
+          fill={NAVY}
+          fontSize={10}
+          fontStyle="bold"
+          align="center"
+          wrap="none"
+        />
         <Rect x={zone.x + 13} y={zone.y + 25} width={zone.width - 26} height={16} fill="#d9b474" stroke={NAVY} strokeWidth={2} cornerRadius={2} />
         <Line points={[zone.x + 18, zone.y + 41, zone.x + 18, zone.y + 49]} stroke={NAVY} strokeWidth={2} />
         <Line points={[zone.x + zone.width - 18, zone.y + 41, zone.x + zone.width - 18, zone.y + 49]} stroke={NAVY} strokeWidth={2} />
