@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWarehouseAssistantContext, buildWarehouseAssistantInput, WAREHOUSE_ASSISTANT_INSTRUCTION } from "@/lib/warehouse/assistant-context";
+import { answerWarehouseAssistantLocally, buildWarehouseAssistantContext, buildWarehouseAssistantInput, WAREHOUSE_ASSISTANT_INSTRUCTION } from "@/lib/warehouse/assistant-context";
 import type { AssetRow, SlotRow } from "@/types/database";
 import type { BoardSnapshot, ZoneWithSlots } from "@/types/warehouse";
 
@@ -50,5 +50,7 @@ describe("warehouse assistant context", () => {
     expect(buildWarehouseAssistantInput("Where is AKE?", [], context)).toContain("AUTHORIZED LIVE FLOWBOARD DATA");
     expect(WAREHOUSE_ASSISTANT_INSTRUCTION).toContain("third- to fifth-grade reading level");
     expect(WAREHOUSE_ASSISTANT_INSTRUCTION).toContain("plain text only");
+    expect(answerWarehouseAssistantLocally("What exactly can youdo?", context)).toContain("I can tell you about ULD types");
+    expect(answerWarehouseAssistantLocally("Which ULDs have DFW?", context)).toBeNull();
   });
 });

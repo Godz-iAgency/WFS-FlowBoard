@@ -30,6 +30,11 @@ function eventDescription(snapshot: BoardSnapshot, event: BoardSnapshot["recentE
   const action = event.is_undo ? "undid" : event.event_type.toLowerCase().replaceAll("_", " ");
   if (event.event_type === "MOVED") return `${action} ${name}: ${eventLocation(snapshot, event.old_state)} to ${eventLocation(snapshot, event.new_state)}`;
   if (event.event_type === "ROTATED") return `${action} ${name}: ${String(record(event.old_state).orientation_degrees ?? 0)} degrees to ${String(record(event.new_state).orientation_degrees ?? 0)} degrees`;
+  if (event.event_type === "ASSET_TYPE_CHANGED") {
+    const oldType = String(record(event.old_state).uld_type ?? record(event.old_state).truck_type ?? "asset").replaceAll("_", " ");
+    const newType = String(record(event.new_state).uld_type ?? record(event.new_state).truck_type ?? "asset").replaceAll("_", " ");
+    return `${action} ${oldType} to ${newType}`;
+  }
   if (event.event_type === "CONFIGURATION_LOADED") return `loaded configuration ${String(record(event.new_state).configuration_name ?? "")}`.trim();
   if (event.event_type === "DESTINATION_CHANGED") return `${action} ${name}: ${String(record(event.old_state).destination ?? "None")} to ${String(record(event.new_state).destination ?? "None")}`;
   if (event.event_type === "TRUCK_STATUS_CHANGED") return `${action} ${name}: ${String(record(event.old_state).truck_status ?? "None")} to ${String(record(event.new_state).truck_status ?? "None")}`;
@@ -183,6 +188,27 @@ Use the labels people see on the board. Say Lane 2 instead of LANE_2. Keep ULD, 
 Return plain text only. Never use Markdown, headings, bold marks, stars, backticks, code blocks, tables, JSON, or separator lines.
 If a short list helps, put each item on its own line and start it with one dash. Do not use nested lists.
 State the zone and slot when available. Mention the data check time only when freshness matters or the user asks.`;
+
+export function answerWarehouseAssistantLocally(
+  question: string,
+  context: ReturnType<typeof buildWarehouseAssistantContext>,
+): string | null {
+  const compact = question.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const asksAboutCapabilities = [
+    "whatdoyoudo",
+    "whatcanyoudo",
+    "canyoudo",
+    "doyoudo",
+    "youdo",
+    "whatyoudo",
+    "howcanyouhelp",
+    "whatareyoufor",
+    "whatistheagentfor",
+  ].some((phrase) => compact.includes(phrase));
+  if (!asksAboutCapabilities) return null;
+
+  return `I read the live ${context.warehouse.name} FlowBoard. I can tell you about ULD types, destinations, lanes, slots, docks, trucks, truck status, tugs, tow connections, floor areas, mail records, and saved layouts. I can also summarize recent activity. I cannot change the board.`;
+}
 
 export function buildWarehouseAssistantInput(
   question: string,

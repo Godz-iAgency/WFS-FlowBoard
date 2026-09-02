@@ -11,6 +11,7 @@ export type EventType =
   | "CREATED"
   | "MOVED"
   | "ROTATED"
+  | "ASSET_TYPE_CHANGED"
   | "DESTINATION_CHANGED"
   | "CONNECTED"
   | "DISCONNECTED"
@@ -76,6 +77,7 @@ export interface Database {
       cleanup_departed_trucks: { Args: Record<PropertyKey, never>; Returns: number };
       create_asset: { Args: { p_warehouse_id: string; p_asset_category: AssetCategory; p_uld_type?: UldType | null; p_truck_type?: TruckType | null; p_external_identifier?: string | null; p_destination?: string | null; p_zone_id?: string | null; p_slot_id?: string | null; p_x_position?: number | null; p_y_position?: number | null; p_orientation_degrees?: number }; Returns: AssetRow };
       move_asset: { Args: { p_asset_id: string; p_expected_version: number; p_zone_id: string; p_slot_id?: string | null; p_x_position?: number | null; p_y_position?: number | null; p_orientation_degrees?: number | null }; Returns: AssetRow };
+      replace_asset_type: { Args: { p_asset_id: string; p_expected_version: number; p_uld_type?: UldType | null; p_truck_type?: TruckType | null }; Returns: AssetRow };
       set_truck_status: { Args: { p_asset_id: string; p_expected_version: number; p_status: TruckStatus; p_departure_cleanup_seconds?: number | null }; Returns: AssetRow };
       soft_remove_asset: { Args: { p_asset_id: string; p_expected_version: number }; Returns: AssetRow };
       update_uld_destination: { Args: { p_asset_id: string; p_expected_version: number; p_destination: string }; Returns: AssetRow };

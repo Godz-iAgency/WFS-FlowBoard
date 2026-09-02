@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import "./setup";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AssetActionSheet } from "@/components/warehouse/AssetActionSheet";
 import { AssetPlacementDialog } from "@/components/warehouse/AssetPlacementDialog";
 import type { AssetRow } from "@/types/database";
@@ -32,6 +32,8 @@ const baseAsset: AssetRow = {
   updated_at: "2026-09-01T00:00:00.000Z",
 };
 
+afterEach(cleanup);
+
 describe("asset placement and manipulation controls", () => {
   it("offers every approved ULD image and returns the selected ULD", () => {
     const onChoose = vi.fn();
@@ -56,9 +58,20 @@ describe("asset placement and manipulation controls", () => {
     expect(onChoose).toHaveBeenCalledWith({ category: "TRUCK", truckType: "TRACTOR_TRAILER" });
   });
 
-  it("exposes ULD destination, rotation, and removal actions", () => {
+  it("offers replacement choices while marking the current type", () => {
+    const onChoose = vi.fn();
+    render(<AssetPlacementDialog kind="ULD" targetName="Lane 2 Slot 1" mode="replace" currentType="AAX" busy={false} onClose={vi.fn()} onChoose={onChoose} />);
+
+    expect(screen.getByRole("heading", { name: "Replace ULD" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "AAX, current type" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "AKE" }));
+    expect(onChoose).toHaveBeenCalledWith({ category: "ULD", uldType: "AKE" });
+  });
+
+  it("exposes ULD destination, rotation, replacement, and removal actions", () => {
     const onRotate = vi.fn();
     const onDestination = vi.fn();
+    const onRequestReplace = vi.fn();
     const onRequestRemove = vi.fn();
     render(
       <AssetActionSheet
@@ -69,6 +82,7 @@ describe("asset placement and manipulation controls", () => {
         onDestination={onDestination}
         onTruckStatus={vi.fn()}
         onRequestDepart={vi.fn()}
+        onRequestReplace={onRequestReplace}
         onRequestRemove={onRequestRemove}
         onRequestConnect={vi.fn()}
         onDisconnect={vi.fn()}
@@ -82,6 +96,9 @@ describe("asset placement and manipulation controls", () => {
     fireEvent.change(screen.getByLabelText("Destination"), { target: { value: "lay" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(onDestination).toHaveBeenCalledWith(baseAsset, "LAY");
+
+    fireEvent.click(screen.getByRole("button", { name: "Replace" }));
+    expect(onRequestReplace).toHaveBeenCalledWith(baseAsset);
 
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
     expect(onRequestRemove).toHaveBeenCalledWith(baseAsset);

@@ -35,15 +35,15 @@ type AssetPosition = { x: number; y: number };
 type Crop = { x: number; y: number; width: number; height: number };
 
 const ULD_CROPS: Record<UldType, Crop> = {
-  AAX: { x: 49, y: 462, width: 76, height: 64 },
-  LAY: { x: 139, y: 462, width: 76, height: 64 },
-  DQF: { x: 49, y: 554, width: 76, height: 64 },
-  AKE: { x: 139, y: 554, width: 76, height: 64 },
+  AAX: { x: 55, y: 464, width: 64, height: 56 },
+  LAY: { x: 145, y: 464, width: 64, height: 56 },
+  DQF: { x: 55, y: 556, width: 64, height: 56 },
+  AKE: { x: 145, y: 556, width: 64, height: 56 },
 };
 
 const REFERENCE_CROPS = {
-  boxTruck: { x: 61, y: 286, width: 142, height: 62 },
-  trailer: { x: 37, y: 214, width: 236, height: 70 },
+  boxTruck: { x: 69, y: 289, width: 124, height: 60 },
+  trailer: { x: 39, y: 220, width: 228, height: 64 },
   office: { x: 982, y: 847, width: 89, height: 49 },
 } satisfies Record<string, Crop>;
 
@@ -64,7 +64,7 @@ function setPointerCursor(event: KonvaEventObject<MouseEvent | DragEvent>, curso
   if (stage) stage.container().style.cursor = cursor;
 }
 
-function ReferenceSprite({ image, crop, x, y, width, height, opacity = 1 }: {
+function ReferenceSprite({ image, crop, x, y, width, height, opacity = 1, blendWithBackground = false }: {
   image: HTMLImageElement | null;
   crop: Crop;
   x: number;
@@ -72,6 +72,7 @@ function ReferenceSprite({ image, crop, x, y, width, height, opacity = 1 }: {
   width: number;
   height: number;
   opacity?: number;
+  blendWithBackground?: boolean;
 }) {
   if (!image) return <Rect x={x} y={y} width={width} height={height} fill="#e7ebee" stroke="#6d7982" cornerRadius={4} />;
   return (
@@ -86,6 +87,7 @@ function ReferenceSprite({ image, crop, x, y, width, height, opacity = 1 }: {
       cropWidth={crop.width}
       cropHeight={crop.height}
       opacity={opacity}
+      globalCompositeOperation={blendWithBackground ? "multiply" : "source-over"}
     />
   );
 }
@@ -145,12 +147,15 @@ function LaneZone({ zone, assets, occupiedSlotIds, highlightingSlots, candidateS
       <Rect listening={false} x={zone.x} y={zone.y} width={zone.width} height={zone.height} fill="#dfe9d8" opacity={0.84} stroke={highlighted ? SEARCH : "#c2d0bf"} strokeWidth={highlighted ? 5 : 1} shadowColor={highlighted ? SEARCH : undefined} shadowBlur={highlighted ? (pulse ? 20 : 9) : 0} />
       <Line listening={false} points={[zone.x + 5, zone.y, zone.x + 5, zone.y + zone.height]} stroke={GOLD} strokeWidth={5} shadowColor="#8b6a00" shadowBlur={2} />
       <Line listening={false} points={[zone.x + zone.width - 5, zone.y, zone.x + zone.width - 5, zone.y + zone.height]} stroke={GOLD} strokeWidth={5} shadowColor="#8b6a00" shadowBlur={2} />
-      {zone.slots.map((slot, index) => (
-        <Group key={slot.id}>
-          <SlotMarker slot={slot} state={zoneSlotState(slot, occupiedSlotIds, highlightingSlots, candidateSlotId)} onChoose={() => onChooseSlot(zone, slot)} />
-          {index < zone.slots.length - 1 ? <Arrow listening={false} points={[slot.x, slot.y + 35, slot.x, slot.y + 45]} stroke={LIGHT_NAVY} fill={LIGHT_NAVY} pointerLength={4} pointerWidth={4} strokeWidth={1.5} /> : null}
-        </Group>
-      ))}
+      {zone.slots.map((slot, index) => {
+        const occupant = assets.find((asset) => asset.is_active && asset.asset_category === "ULD" && asset.slot_id === slot.id);
+        return (
+          <Group key={slot.id}>
+            <SlotMarker slot={slot} state={zoneSlotState(slot, occupiedSlotIds, highlightingSlots, candidateSlotId)} onChoose={() => onChooseSlot(zone, slot)} />
+            {index < zone.slots.length - 1 && !occupant?.destination ? <Arrow listening={false} points={[slot.x, slot.y + 38, slot.x, slot.y + 44]} stroke={LIGHT_NAVY} fill={LIGHT_NAVY} pointerLength={3} pointerWidth={3} strokeWidth={1.4} /> : null}
+          </Group>
+        );
+      })}
       <Rect listening={false} x={zone.x + 17} y={zone.y + zone.height + 8} width={zone.width - 34} height={29} fill={NAVY} cornerRadius={5} shadowColor="#1e3550" shadowBlur={4} shadowOpacity={0.25} />
       <Text listening={false} x={zone.x + 17} y={zone.y + zone.height + 13} width={zone.width - 34} text={zone.name.toUpperCase()} fill="white" fontSize={16} fontStyle="bold" align="center" />
       <Text listening={false} x={zone.x} y={zone.y + zone.height + 41} width={zone.width} text={`(${occupancy.occupied} / ${occupancy.capacity} ULD)`} fill={NAVY} fontSize={12} fontStyle="bold" align="center" />
@@ -330,13 +335,13 @@ function UldAsset({ asset, image, x, y, selected, highlighted, pulse, draggable,
   const crop = ULD_CROPS[asset.uld_type ?? "AAX"];
   return (
     <Group x={x} y={y} draggable={draggable} onMouseEnter={(event) => setPointerCursor(event, draggable ? "grab" : "pointer")} onMouseLeave={(event) => setPointerCursor(event, "default")} onClick={(event) => { event.cancelBubble = true; onSelect(); }} onTap={(event) => { event.cancelBubble = true; onSelect(); }} onDragStart={(event) => { setPointerCursor(event, "grabbing"); onDragStart(event); }} onDragMove={onDragMove} onDragEnd={(event) => { setPointerCursor(event, "grab"); onDragEnd(event); }}>
-      {emphasized ? <Rect x={-42} y={-35} width={84} height={73} cornerRadius={9} stroke={highlighted ? SEARCH : GOLD} strokeWidth={highlighted ? (pulse ? 5 : 3) : 4} shadowColor={highlighted ? SEARCH : GOLD} shadowBlur={highlighted ? (pulse ? 18 : 9) : 10} /> : null}
+      {emphasized ? <Rect x={-47} y={-39} width={94} height={78} cornerRadius={9} stroke={highlighted ? SEARCH : GOLD} strokeWidth={highlighted ? (pulse ? 5 : 3) : 4} shadowColor={highlighted ? SEARCH : GOLD} shadowBlur={highlighted ? (pulse ? 18 : 9) : 10} /> : null}
       <Group rotation={asset.orientation_degrees === 180 ? 180 : 0}>
-        <ReferenceSprite image={image} crop={crop} x={-38} y={-31} width={76} height={64} />
+        <ReferenceSprite image={image} crop={crop} x={-43} y={-35} width={86} height={70} blendWithBackground />
       </Group>
       <Rect listening={false} x={-21} y={-9} width={42} height={19} fill="rgba(248,250,252,.9)" stroke="#6a7782" strokeWidth={1} cornerRadius={2} />
       <Text listening={false} x={-21} y={-6} width={42} text={asset.uld_type ?? "ULD"} fill={NAVY} fontSize={13} fontStyle="bold" align="center" />
-      {asset.destination ? <Text x={-42} y={35} width={84} text={asset.destination} fill={NAVY} fontSize={10} fontStyle="bold" align="center" ellipsis wrap="none" /> : null}
+      {asset.destination ? <Text listening={false} x={-47} y={37} width={94} text={asset.destination} fill={NAVY} fontSize={10} fontStyle="bold" align="center" ellipsis wrap="none" /> : null}
     </Group>
   );
 }
@@ -357,13 +362,13 @@ function TruckAsset({ asset, image, zone, x, y, selected, highlighted, pulse, dr
   onDragEnd: (event: KonvaEventObject<DragEvent>) => void;
 }) {
   const isBox = asset.truck_type === "BOX_TRUCK";
-  const width = isBox ? 116 : 158;
+  const width = isBox ? 150 : 218;
   const crop = isBox ? REFERENCE_CROPS.boxTruck : REFERENCE_CROPS.trailer;
   const emphasized = selected || highlighted;
   return (
     <Group x={x} y={y} draggable={draggable} onMouseEnter={(event) => setPointerCursor(event, draggable ? "grab" : "pointer")} onMouseLeave={(event) => setPointerCursor(event, "default")} onClick={(event) => { event.cancelBubble = true; onSelect(); }} onTap={(event) => { event.cancelBubble = true; onSelect(); }} onDragStart={(event) => { setPointerCursor(event, "grabbing"); onDragStart(event); }} onDragMove={onDragMove} onDragEnd={(event) => { setPointerCursor(event, "grab"); onDragEnd(event); }}>
       {emphasized ? <Rect x={-7} y={-4} width={width + 14} height={zone.height - 6} stroke={highlighted ? SEARCH : GOLD} strokeWidth={highlighted ? (pulse ? 5 : 3) : 4} cornerRadius={8} shadowColor={highlighted ? SEARCH : GOLD} shadowBlur={12} /> : null}
-      <ReferenceSprite image={image} crop={crop} x={0} y={0} width={width} height={zone.height - 14} />
+      <ReferenceSprite image={image} crop={crop} x={0} y={0} width={width} height={zone.height - 10} blendWithBackground />
       {asset.external_identifier ? <Text x={4} y={zone.height - 21} width={width - 8} text={asset.external_identifier} fill={NAVY} fontSize={8} fontStyle="bold" align="center" /> : null}
     </Group>
   );
@@ -387,7 +392,7 @@ function TugAsset({ asset, image, x, y, selected, highlighted, pulse, draggable,
     <Group x={x} y={y} draggable={draggable} onMouseEnter={(event) => setPointerCursor(event, draggable ? "grab" : "pointer")} onMouseLeave={(event) => setPointerCursor(event, "default")} onClick={(event) => { event.cancelBubble = true; onSelect(); }} onTap={(event) => { event.cancelBubble = true; onSelect(); }} onDragStart={(event) => { setPointerCursor(event, "grabbing"); onDragStart(event); }} onDragEnd={(event) => { setPointerCursor(event, "grab"); onDragEnd(event); }}>
       {emphasized ? <Rect x={-36} y={-45} width={72} height={90} stroke={highlighted ? SEARCH : GOLD} strokeWidth={highlighted ? (pulse ? 5 : 3) : 4} cornerRadius={8} shadowColor={highlighted ? SEARCH : GOLD} shadowBlur={12} /> : null}
       <Group rotation={asset.orientation_degrees === 180 ? 180 : 0}>
-        {image ? <KonvaImage image={image} x={-34} y={-43} width={68} height={86} /> : <Rect x={-30} y={-39} width={60} height={78} fill="#f7f7f1" stroke="#45535f" cornerRadius={5} />}
+        {image ? <KonvaImage image={image} x={-34} y={-43} width={68} height={86} globalCompositeOperation="multiply" /> : <Rect x={-30} y={-39} width={60} height={78} fill="#f7f7f1" stroke="#45535f" cornerRadius={5} />}
       </Group>
     </Group>
   );

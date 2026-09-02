@@ -77,6 +77,21 @@ export async function moveAsset(
   return data;
 }
 
+export async function replaceAssetType(
+  supabase: SupabaseClient<Database>,
+  asset: Pick<AssetRow, "id" | "version">,
+  replacement: { uldType: UldType; truckType?: never } | { truckType: TruckType; uldType?: never },
+): Promise<AssetRow> {
+  const { data, error } = await supabase.rpc("replace_asset_type", {
+    p_asset_id: asset.id,
+    p_expected_version: asset.version,
+    p_uld_type: replacement.uldType ?? null,
+    p_truck_type: replacement.truckType ?? null,
+  });
+  if (error) throw mutationFailure(error.message);
+  return data;
+}
+
 export async function updateTruckStatus(
   supabase: SupabaseClient<Database>,
   asset: Pick<AssetRow, "id" | "version">,

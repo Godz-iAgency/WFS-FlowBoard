@@ -151,7 +151,7 @@ export function ElementsPanel({ zones, assets, selectedTool, onSelectTool, onCle
             <ApprovedAssetSprite tool={activeUldTool} />
             <strong>{displayedUld}</strong>
           </PaletteButton>
-          <span className="asset-preview-help">Drag this image to an empty ULD position</span>
+          <span className="asset-preview-help">Drag to a ULD position to place or replace</span>
         </div>
 
         <div className="asset-palette asset-palette--equipment" aria-labelledby="equipment-palette-heading">
@@ -172,7 +172,7 @@ export function ElementsPanel({ zones, assets, selectedTool, onSelectTool, onCle
               <ApprovedAssetSprite tool={displayedEquipment} />
               <strong>{equipmentLabel(displayedEquipment)}</strong>
             </PaletteButton>
-            <span className="asset-preview-help">Drag this image to its highlighted target</span>
+            <span className="asset-preview-help">Drag to its target to place or replace</span>
           </div>
         </div>
 

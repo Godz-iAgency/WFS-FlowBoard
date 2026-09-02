@@ -19,11 +19,11 @@ import { WarehouseAssistant } from "@/components/warehouse/WarehouseAssistant";
 import { useWarehouseRealtime } from "@/hooks/useWarehouseRealtime";
 import { createClient } from "@/lib/supabase/client";
 import {
-  connectTow, createAsset, disconnectTow, loadBoardConfiguration, moveAsset, saveBoardConfiguration, softRemoveAsset,
+  connectTow, createAsset, disconnectTow, loadBoardConfiguration, moveAsset, replaceAssetType, saveBoardConfiguration, softRemoveAsset,
   undoLastAction, updateTruckStatus, updateUldDestination,
 } from "@/lib/warehouse/mutations";
 import { PRESENTATION_BOARD_HEIGHT, PRESENTATION_BOARD_WIDTH, presentationToLogicalX } from "@/lib/warehouse/board-projection";
-import { findNearestAvailableDock, findNearestAvailableSlot, isPointInsideZone, type SearchResult } from "@/lib/warehouse/selectors";
+import { findNearestDock, findNearestSlot, isPointInsideZone, type SearchResult } from "@/lib/warehouse/selectors";
 import type { AssetRow, ConfigurationRow, ConnectionRow, SlotRow, TruckStatus, TruckType, UldType } from "@/types/database";
 import { type BoardHighlight, type BoardSnapshot, type ClientPoint, type PlacementTool, type ZoneWithSlots } from "@/types/warehouse";
 
@@ -36,8 +36,18 @@ interface ConfirmState {
 }
 
 type PlacementTarget =
-  | { kind: "ULD"; zone: ZoneWithSlots; slot: SlotRow }
-  | { kind: "TRUCK"; zone: ZoneWithSlots };
+  | { kind: "ULD"; zone: ZoneWithSlots; slot: SlotRow; existingAsset?: AssetRow }
+  | { kind: "TRUCK"; zone: ZoneWithSlots; existingAsset?: AssetRow };
+
+function placementToolLabel(tool: PlacementTool): string {
+  if (tool.category === "ULD") return tool.uldType;
+  if (tool.category === "TRUCK") return tool.truckType === "BOX_TRUCK" ? "box truck" : "tractor trailer";
+  return tool.category;
+}
+
+function assetTypeLabel(asset: AssetRow): string {
+  return asset.uld_type ?? (asset.truck_type === "BOX_TRUCK" ? "box truck" : asset.truck_type === "TRACTOR_TRAILER" ? "tractor trailer" : asset.asset_category);
+}
 
 export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSnapshot: BoardSnapshot; userEmail: string }) {
   const { snapshot, state, error, refresh } = useWarehouseRealtime(initialSnapshot);
@@ -61,7 +71,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
 
   const selectedAsset = snapshot.assets.find((asset) => asset.id === selectedAssetId);
   const selectedZone = snapshot.zones.find((zone) => zone.id === selectedAsset?.zone_id);
-  const selectedConnection = snapshot.connections.find((connection) => connection.parent_asset_id === selectedAssetId || connection.child_asset_id === selectedAssetId);
+  const selectedConnection = snapshot.connections.find((connection) => connection.is_active && (connection.parent_asset_id === selectedAssetId || connection.child_asset_id === selectedAssetId));
   const connectingTug = snapshot.assets.find((asset) => asset.id === connectingTugId && asset.is_active && asset.asset_category === "TUG");
   const activelyConnectedAssetIds = new Set(snapshot.connections.filter((connection) => connection.is_active).flatMap((connection) => [connection.parent_asset_id, connection.child_asset_id]));
   const connectableUlds = snapshot.assets.filter((asset) => {
@@ -183,6 +193,79 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
     return placed;
   }
 
+  async function replaceExistingAsset(asset: AssetRow, tool: PlacementTool): Promise<boolean> {
+    if (asset.asset_category === "ULD" && tool.category === "ULD") {
+      if (asset.uld_type === tool.uldType) {
+        notify(`${tool.uldType} is already the current ULD type.`, true);
+        return false;
+      }
+      const replaced = await runMutation(
+        () => replaceAssetType(createClient(), asset, { uldType: tool.uldType }),
+        `${asset.uld_type ?? "ULD"} replaced with ${tool.uldType}.`,
+      );
+      if (replaced) setPlacementTarget(null);
+      return replaced;
+    }
+    if (asset.asset_category === "TRUCK" && tool.category === "TRUCK") {
+      if (asset.truck_type === tool.truckType) {
+        notify(`${placementToolLabel(tool)} is already at this dock.`, true);
+        return false;
+      }
+      const replaced = await runMutation(
+        () => replaceAssetType(createClient(), asset, { truckType: tool.truckType }),
+        `${assetTypeLabel(asset)} replaced with ${placementToolLabel(tool)}.`,
+      );
+      if (replaced) setPlacementTarget(null);
+      return replaced;
+    }
+    notify("Choose the same kind of asset to replace this position.", true);
+    return false;
+  }
+
+  function requestDropReplacement(asset: AssetRow, tool: PlacementTool, targetName: string) {
+    const activeConnection = snapshot.connections.find((connection) => connection.is_active && (connection.parent_asset_id === asset.id || connection.child_asset_id === asset.id));
+    if (activeConnection) {
+      notify("Disconnect the tug before replacing this ULD.", true);
+      return;
+    }
+    if ((asset.asset_category === "ULD" && tool.category !== "ULD") || (asset.asset_category === "TRUCK" && tool.category !== "TRUCK")) {
+      notify("This asset cannot replace the item in that position.", true);
+      return;
+    }
+    if ((asset.asset_category === "ULD" && tool.category === "ULD" && asset.uld_type === tool.uldType)
+      || (asset.asset_category === "TRUCK" && tool.category === "TRUCK" && asset.truck_type === tool.truckType)) {
+      notify(`${placementToolLabel(tool)} is already in ${targetName}.`, true);
+      return;
+    }
+    setElementsOpen(false);
+    setConfirm({
+      title: `Replace ${assetTypeLabel(asset)}?`,
+      message: `Replace the ${assetTypeLabel(asset)} in ${targetName} with ${placementToolLabel(tool)}? Its position and recorded details will stay the same.`,
+      confirmLabel: "Confirm Replace",
+      destructive: false,
+      action: async () => { await replaceExistingAsset(asset, tool); },
+    });
+  }
+
+  function openReplaceDialog(asset: AssetRow) {
+    const zone = snapshot.zones.find((candidate) => candidate.id === asset.zone_id);
+    if (!zone) {
+      notify("This asset does not have a replaceable floor position.", true);
+      return;
+    }
+    if (asset.asset_category === "ULD") {
+      const slot = zone.slots.find((candidate) => candidate.id === asset.slot_id);
+      if (!slot) {
+        notify("This ULD does not have a replaceable lane position.", true);
+        return;
+      }
+      setPlacementTarget({ kind: "ULD", zone, slot, existingAsset: asset });
+    } else if (asset.asset_category === "TRUCK") {
+      setPlacementTarget({ kind: "TRUCK", zone, existingAsset: asset });
+    }
+    setSelectedAssetId(null);
+  }
+
   async function placeTug(zone: ZoneWithSlots, position: { x: number; y: number }): Promise<boolean> {
     const placed = await runMutation(
       () => createAsset(createClient(), {
@@ -202,9 +285,9 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
     setPlacementTarget(null);
     setPlacementTool(tool);
     const instruction = tool.category === "ULD"
-      ? `Tap an empty lane position or drag ${tool.uldType} onto it.`
+      ? `Tap an empty lane position, or drag ${tool.uldType} onto a position to place or replace it.`
       : tool.category === "TRUCK"
-        ? `Tap an empty DD06–DD15 truck target or drag the ${tool.truckType === "BOX_TRUCK" ? "box truck" : "trailer"} onto it.`
+        ? `Tap an empty DD06–DD15 target, or drag the ${tool.truckType === "BOX_TRUCK" ? "box truck" : "trailer"} onto a dock to place or replace it.`
         : tool.category === "AIRCRAFT"
           ? `${tool.aircraftType.slice(1)} aircraft selected. Placement is disabled until its approved operating area is defined.`
           : "Tap or drag the tug into the highlighted warehouse movement area.";
@@ -235,9 +318,14 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
     const liveAssets = snapshot.assets.filter((asset) => asset.is_active);
     if (tool.category === "ULD") {
       const zones = snapshot.zones.filter((zone) => zone.zone_type === "LANE" || zone.zone_type === "MIXED");
-      const target = findNearestAvailableSlot(logical, zones, liveAssets, undefined, 100);
+      const target = findNearestSlot(logical, zones, 100);
       if (!target) {
-        notify("Drop the ULD over an available lane or Mixed Area position.", true);
+        notify("Drop the ULD over a lane or Mixed Area position.", true);
+        return;
+      }
+      const occupant = liveAssets.find((asset) => asset.asset_category === "ULD" && asset.slot_id === target.slot.id);
+      if (occupant) {
+        requestDropReplacement(occupant, tool, `${target.zone.name} Slot ${target.slot.slot_number}`);
         return;
       }
       setElementsOpen(false);
@@ -245,9 +333,14 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
       return;
     }
     if (tool.category === "TRUCK") {
-      const dock = findNearestAvailableDock(logical, snapshot.zones, liveAssets, undefined, 190);
+      const dock = findNearestDock(logical, snapshot.zones, 190);
       if (!dock) {
-        notify("Drop the truck over an available DD06–DD15 truck target.", true);
+        notify("Drop the truck over a DD06–DD15 truck target.", true);
+        return;
+      }
+      const occupant = liveAssets.find((asset) => asset.asset_category === "TRUCK" && asset.zone_id === dock.id);
+      if (occupant) {
+        requestDropReplacement(occupant, tool, dock.name);
         return;
       }
       setElementsOpen(false);
@@ -271,6 +364,10 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
     const target = placementTarget;
     if (!target) return;
     setPlacementTool(tool);
+    if (target.existingAsset) {
+      void replaceExistingAsset(target.existingAsset, tool);
+      return;
+    }
     if (target.kind === "ULD" && tool.category === "ULD") void placeUld(tool.uldType, target.zone, target.slot);
     if (target.kind === "TRUCK" && tool.category === "TRUCK") void placeTruck(tool.truckType, target.zone);
   }
@@ -442,14 +539,14 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
         </section>
       </div>
 
-      {selectedAsset ? <AssetActionSheet asset={selectedAsset} zone={selectedZone} connection={selectedConnection} busy={busy} onClose={() => setSelectedAssetId(null)} onRotate={handleRotate} onDestination={handleDestination} onTruckStatus={handleTruckStatus} onRequestDepart={requestDepart} onRequestRemove={requestRemove} onRequestConnect={(asset) => setConnectingTugId(asset.id)} onDisconnect={handleDisconnect} /> : null}
+      {selectedAsset ? <AssetActionSheet asset={selectedAsset} zone={selectedZone} connection={selectedConnection} busy={busy} onClose={() => setSelectedAssetId(null)} onRotate={handleRotate} onDestination={handleDestination} onTruckStatus={handleTruckStatus} onRequestDepart={requestDepart} onRequestReplace={openReplaceDialog} onRequestRemove={requestRemove} onRequestConnect={(asset) => setConnectingTugId(asset.id)} onDisconnect={handleDisconnect} /> : null}
       {connectingTug ? <ConnectTugDialog tug={connectingTug} ulds={connectableUlds} zones={snapshot.zones} busy={busy} onClose={() => setConnectingTugId(null)} onConnect={(tug, uld) => void handleConnect(tug, uld)} /> : null}
       {searchOpen ? <SearchPanel snapshot={snapshot} onClose={() => setSearchOpen(false)} onLocate={handleLocate} /> : null}
       <WarehouseAssistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       {historyOpen ? <HistoryPanel snapshot={snapshot} onClose={() => setHistoryOpen(false)} /> : null}
       {saveOpen ? <SaveBoardDialog busy={busy} onClose={() => setSaveOpen(false)} onSave={(name, description) => void handleSave(name, description)} /> : null}
       {loadOpen ? <LoadConfigurationDialog configurations={snapshot.configurations} onClose={() => setLoadOpen(false)} onChoose={requestConfigurationLoad} /> : null}
-      {placementTarget ? <AssetPlacementDialog kind={placementTarget.kind} targetName={placementTarget.kind === "ULD" ? `${placementTarget.zone.name} Slot ${placementTarget.slot.slot_number}` : placementTarget.zone.name} busy={busy} onClose={() => setPlacementTarget(null)} onChoose={choosePlacementAsset} /> : null}
+      {placementTarget ? <AssetPlacementDialog kind={placementTarget.kind} targetName={placementTarget.kind === "ULD" ? `${placementTarget.zone.name} Slot ${placementTarget.slot.slot_number}` : placementTarget.zone.name} busy={busy} mode={placementTarget.existingAsset ? "replace" : "place"} currentType={placementTarget.existingAsset?.uld_type ?? placementTarget.existingAsset?.truck_type} onClose={() => setPlacementTarget(null)} onChoose={choosePlacementAsset} /> : null}
       {confirm ? <ConfirmationDialog title={confirm.title} message={confirm.message} confirmLabel={confirm.confirmLabel} destructive={confirm.destructive} busy={busy} onCancel={() => setConfirm(null)} onConfirm={() => void executeConfirmation()} /> : null}
       {dragPreview ? <div className="asset-drag-ghost" style={{ left: dragPreview.point.x, top: dragPreview.point.y }} aria-hidden="true"><ApprovedAssetSprite tool={dragPreview.tool} /></div> : null}
       {toast ? <div className={`operation-toast ${toast.error ? "operation-toast--error" : ""}`} role={toast.error ? "alert" : "status"}>{toast.message}</div> : null}

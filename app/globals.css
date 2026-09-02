@@ -105,7 +105,7 @@ button { min-height: 44px; }
 .asset-preview:active { cursor: grabbing; }
 .asset-preview.selected { border: 2px solid var(--navy-800); background: #edf5fc; box-shadow: inset 0 0 0 2px rgba(10,61,115,.1); }
 .asset-preview-help { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; text-align: center; }
-.approved-asset-sprite { display: block; flex: 0 0 auto; background-image: url('/reference/warehouse-floor-plan.png'); background-repeat: no-repeat; background-size: 1672px 941px; }
+.approved-asset-sprite { display: block; flex: 0 0 auto; background-image: url('/reference/warehouse-floor-plan.png'); background-repeat: no-repeat; background-size: 1672px 941px; mix-blend-mode: multiply; }
 .approved-asset-sprite--aax, .approved-asset-sprite--lay, .approved-asset-sprite--dqf, .approved-asset-sprite--ake { width: 76px; height: 64px; }
 .approved-asset-sprite--aax { background-position: -49px -462px; }
 .approved-asset-sprite--lay { background-position: -139px -462px; }
@@ -189,7 +189,7 @@ button { min-height: 44px; }
 .departure-countdown { margin: 13px 0 0; padding: 10px 12px; border-radius: 8px; background: #e7f1ff; color: #1f5eac; font-weight: 850; text-align: center; }
 .asset-actions { margin-top: 15px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .asset-actions button { min-height: 52px; padding: 7px; border: 1px solid #a9bac9; border-radius: 8px; background: #f7fafc; color: var(--navy-900); font-size: 12px; font-weight: 800; cursor: pointer; }
-.asset-actions .action-depart { border-color: #d48c29; color: #85520d; background: #fff7e7; }.asset-actions .action-remove { border-color: #d47d82; color: #9e1d24; background: #fff1f2; }
+.asset-actions .action-depart { border-color: #d48c29; color: #85520d; background: #fff7e7; }.asset-actions .action-replace { border-color: #5990ba; color: #174f7c; background: #eef7fe; }.asset-actions .action-remove { border-color: #d47d82; color: #9e1d24; background: #fff1f2; }
 .asset-details { margin: 14px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }.asset-details > div { padding: 8px 10px; border-radius: 7px; background: #eef3f7; }.asset-details dt { color: var(--muted); font-size: 10px; text-transform: uppercase; }.asset-details dd { margin: 2px 0 0; color: var(--navy-900); font-weight: 750; }
 .destination-form { margin-top: 16px; }.destination-form > div { margin-top: 10px; display: flex; justify-content: flex-end; gap: 8px; }
 .history-drawer { width: min(520px, 94vw); height: 100dvh; overflow: auto; padding: 25px; background: white; box-shadow: -18px 0 50px rgba(0,20,42,.27); }

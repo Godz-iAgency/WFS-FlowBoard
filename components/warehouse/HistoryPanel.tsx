@@ -24,6 +24,11 @@ function eventDescription(snapshot: BoardSnapshot, event: BoardSnapshot["recentE
   const prefix = event.is_undo ? "undid" : event.event_type.toLowerCase().replaceAll("_", " ");
   if (event.event_type === "MOVED") return `${prefix} ${name}: ${location(snapshot, event.old_state)} → ${location(snapshot, event.new_state)}`;
   if (event.event_type === "ROTATED") return `${prefix} ${name}: ${String(record(event.old_state).orientation_degrees ?? 0)}° → ${String(record(event.new_state).orientation_degrees ?? 0)}°`;
+  if (event.event_type === "ASSET_TYPE_CHANGED") {
+    const oldType = String(record(event.old_state).uld_type ?? record(event.old_state).truck_type ?? "asset").replaceAll("_", " ");
+    const newType = String(record(event.new_state).uld_type ?? record(event.new_state).truck_type ?? "asset").replaceAll("_", " ");
+    return `${prefix} ${oldType}: ${oldType} → ${newType}`;
+  }
   if (event.event_type === "CONFIGURATION_LOADED") return `loaded configuration ${String(record(event.new_state).configuration_name ?? "")}`.trim();
   if (event.event_type === "DESTINATION_CHANGED") return `${prefix} ${name}: ${String(record(event.old_state).destination ?? "None")} → ${String(record(event.new_state).destination ?? "None")}`;
   if (event.event_type === "TRUCK_STATUS_CHANGED") return `${prefix} ${name}: ${String(record(event.old_state).truck_status ?? "None")} → ${String(record(event.new_state).truck_status ?? "None")}`;

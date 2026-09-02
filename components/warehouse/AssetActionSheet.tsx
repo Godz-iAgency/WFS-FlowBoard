@@ -19,6 +19,7 @@ export function AssetActionSheet({
   onDestination,
   onTruckStatus,
   onRequestDepart,
+  onRequestReplace,
   onRequestRemove,
   onRequestConnect,
   onDisconnect,
@@ -32,6 +33,7 @@ export function AssetActionSheet({
   onDestination: (asset: AssetRow, destination: string) => void;
   onTruckStatus: (asset: AssetRow, status: TruckStatus) => void;
   onRequestDepart: (asset: AssetRow) => void;
+  onRequestReplace: (asset: AssetRow) => void;
   onRequestRemove: (asset: AssetRow) => void;
   onRequestConnect: (asset: AssetRow) => void;
   onDisconnect: (connection: ConnectionRow) => void;
@@ -85,6 +87,7 @@ export function AssetActionSheet({
           {asset.asset_category === "TRUCK" ? <button type="button" className="action-depart" onClick={() => onRequestDepart(asset)} disabled={busy}>Depart</button> : null}
           {asset.asset_category === "TUG" && !connection ? <button type="button" onClick={() => onRequestConnect(asset)} disabled={busy}>Connect ULD</button> : null}
           {asset.asset_category === "TUG" && connection ? <button type="button" onClick={() => onDisconnect(connection)} disabled={busy}>Disconnect</button> : null}
+          {(asset.asset_category === "ULD" || asset.asset_category === "TRUCK") && !connection ? <button type="button" className="action-replace" onClick={() => onRequestReplace(asset)} disabled={busy}>Replace</button> : null}
           {!connection ? <button type="button" className="action-remove" onClick={() => onRequestRemove(asset)} disabled={busy}>Remove</button> : null}
           <button type="button" onClick={onClose}>Cancel</button>
         </div>

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { readPublicEnvironment } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
-import { buildWarehouseAssistantContext, buildWarehouseAssistantInput, WAREHOUSE_ASSISTANT_INSTRUCTION } from "@/lib/warehouse/assistant-context";
+import { answerWarehouseAssistantLocally, buildWarehouseAssistantContext, buildWarehouseAssistantInput, WAREHOUSE_ASSISTANT_INSTRUCTION } from "@/lib/warehouse/assistant-context";
 import { normalizeWarehouseAssistantAnswer } from "@/lib/warehouse/assistant-response";
 import { BoardRepositoryError, getBoardSnapshot } from "@/lib/warehouse/repository";
 
@@ -16,24 +16,42 @@ const AssistantRequest = z.object({
   })).max(8).default([]),
 });
 
-interface GeminiInteractionResponse {
-  status?: string;
-  output_text?: string;
-  steps?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
+interface GeminiGenerateContentResponse {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+    finishReason?: string;
+    finishMessage?: string;
+  }>;
+  promptFeedback?: { blockReason?: string };
   error?: { message?: string };
 }
 
-function extractGeminiText(payload: GeminiInteractionResponse): string | null {
-  if (typeof payload.output_text === "string" && payload.output_text.trim()) return payload.output_text.trim();
-  const text = payload.steps
-    ?.filter((step) => step.type === "model_output")
-    .flatMap((step) => step.content ?? [])
-    .filter((content) => content.type === "text" && typeof content.text === "string")
-    .map((content) => content.text!.trim())
+function extractGeminiText(payload: GeminiGenerateContentResponse): string | null {
+  const text = payload.candidates
+    ?.flatMap((candidate) => candidate.content?.parts ?? [])
+    .filter((part) => !part.thought && typeof part.text === "string")
+    .map((part) => part.text!.trim())
     .filter(Boolean)
     .join("\n")
     .trim();
   return text || null;
+}
+
+async function requestGemini(model: string, apiKey: string, input: string): Promise<Response> {
+  return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: WAREHOUSE_ASSISTANT_INSTRUCTION }] },
+      contents: [{ role: "user", parts: [{ text: input }] }],
+      generationConfig: {
+        thinkingConfig: { thinkingLevel: "low" },
+        maxOutputTokens: 600,
+      },
+    }),
+    signal: AbortSignal.timeout(12_000),
+    cache: "no-store",
+  });
 }
 
 const requestWindows = new Map<string, { startedAt: number; count: number }>();
@@ -82,24 +100,16 @@ export async function POST(request: Request) {
       );
     }
     const snapshot = await getBoardSnapshot(supabase, environment.data.warehouseCode);
+    const context = buildWarehouseAssistantContext(snapshot);
+    const localAnswer = answerWarehouseAssistantLocally(parsed.data.message, context);
+    if (localAnswer) return Response.json({ answer: localAnswer, snapshotTime: snapshot.fetchedAt });
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) return Response.json({ error: "The FlowBoard agent is not configured yet." }, { status: 503 });
-    const context = buildWarehouseAssistantContext(snapshot);
     const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.7-flash";
-    const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        model,
-        input: buildWarehouseAssistantInput(parsed.data.message, parsed.data.history, context),
-        system_instruction: WAREHOUSE_ASSISTANT_INSTRUCTION,
-        store: false,
-        generation_config: { thinking_level: "low", max_output_tokens: 500 },
-      }),
-      signal: AbortSignal.timeout(25_000),
-      cache: "no-store",
-    });
-    const payload = await geminiResponse.json().catch(() => ({})) as GeminiInteractionResponse;
+    const input = buildWarehouseAssistantInput(parsed.data.message, parsed.data.history, context);
+    let geminiResponse = await requestGemini(model, apiKey, input);
+    if (geminiResponse.status >= 500) geminiResponse = await requestGemini(model, apiKey, input);
+    const payload = await geminiResponse.json().catch(() => ({})) as GeminiGenerateContentResponse;
     if (!geminiResponse.ok) {
       console.error("Gemini warehouse assistant request failed", { status: geminiResponse.status, message: payload.error?.message });
       if (geminiResponse.status === 429) {
@@ -108,7 +118,14 @@ export async function POST(request: Request) {
       return Response.json({ error: "The FlowBoard agent could not answer right now. Please try again." }, { status: 502 });
     }
     const answer = extractGeminiText(payload);
-    if (!answer) return Response.json({ error: "The FlowBoard agent returned no answer. Please try again." }, { status: 502 });
+    if (!answer) {
+      console.error("Gemini warehouse assistant returned no text", {
+        finishReason: payload.candidates?.[0]?.finishReason,
+        finishMessage: payload.candidates?.[0]?.finishMessage,
+        blockReason: payload.promptFeedback?.blockReason,
+      });
+      return Response.json({ error: "The FlowBoard agent returned no answer. Please try again." }, { status: 502 });
+    }
     return Response.json({ answer: normalizeWarehouseAssistantAnswer(answer), snapshotTime: snapshot.fetchedAt });
   } catch (error) {
     if (error instanceof BoardRepositoryError) {

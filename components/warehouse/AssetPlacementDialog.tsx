@@ -14,10 +14,12 @@ function placementLabel(tool: PlacementTool): { key: string; label: string } {
   return { key: "TUG", label: "Tug" };
 }
 
-export function AssetPlacementDialog({ kind, targetName, busy, onClose, onChoose }: {
+export function AssetPlacementDialog({ kind, targetName, busy, mode = "place", currentType, onClose, onChoose }: {
   kind: "ULD" | "TRUCK";
   targetName: string;
   busy: boolean;
+  mode?: "place" | "replace";
+  currentType?: UldType | TruckType | null;
   onClose: () => void;
   onChoose: (tool: PlacementTool) => void;
 }) {
@@ -30,19 +32,23 @@ export function AssetPlacementDialog({ kind, targetName, busy, onClose, onChoose
       <section className="modal-card placement-dialog" role="dialog" aria-modal="true" aria-labelledby="placement-title">
         <div className="modal-header">
           <div>
-            <p>PLACE OPERATIONAL ASSET</p>
-            <h2 id="placement-title">Choose {kind === "ULD" ? "a ULD" : "a truck"}</h2>
+            <p>{mode === "replace" ? "UPDATE OPERATIONAL ASSET" : "PLACE OPERATIONAL ASSET"}</p>
+            <h2 id="placement-title">{mode === "replace" ? `Replace ${kind === "ULD" ? "ULD" : "truck"}` : `Choose ${kind === "ULD" ? "a ULD" : "a truck"}`}</h2>
           </div>
           <button type="button" className="icon-button" aria-label="Close" onClick={onClose}>×</button>
         </div>
-        <p className="modal-intro">Place at <strong>{targetName}</strong>. The new asset will be saved to Supabase immediately.</p>
+        <p className="modal-intro">
+          {mode === "replace" ? "Choose a new type for" : "Place at"} <strong>{targetName}</strong>.
+          {mode === "replace" ? " Its position and recorded details will stay the same." : " The new asset will be saved to Supabase immediately."}
+        </p>
         <div className={`placement-options placement-options--${kind.toLowerCase()}`}>
           {tools.map((tool) => {
             const { key, label } = placementLabel(tool);
+            const isCurrent = key === currentType;
             return (
-              <button key={key} type="button" disabled={busy} onClick={() => onChoose(tool)}>
+              <button key={key} type="button" disabled={busy || isCurrent} aria-label={isCurrent ? `${label}, current type` : label} onClick={() => onChoose(tool)}>
                 <ApprovedAssetSprite tool={tool} />
-                <strong>{label}</strong>
+                <strong>{label}{isCurrent ? " · Current" : ""}</strong>
               </button>
             );
           })}

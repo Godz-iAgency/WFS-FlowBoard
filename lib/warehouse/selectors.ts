@@ -49,6 +49,21 @@ export function getDockTruck(zoneId: string, assets: AssetRow[]): AssetRow | und
   return assets.find((asset) => asset.is_active && asset.asset_category === "TRUCK" && asset.zone_id === zoneId);
 }
 
+export function findNearestDock(
+  position: { x: number; y: number },
+  zones: ZoneWithSlots[],
+  maximumDistance = 170,
+): ZoneWithSlots | null {
+  let nearest: { zone: ZoneWithSlots; distance: number } | null = null;
+  for (const zone of zones) {
+    if (zone.zone_type !== "DOCK") continue;
+    const target = { x: zone.x + zone.width + 92, y: zone.y + zone.height / 2 };
+    const distance = Math.hypot(target.x - position.x, target.y - position.y);
+    if (distance <= maximumDistance && (!nearest || distance < nearest.distance)) nearest = { zone, distance };
+  }
+  return nearest?.zone ?? null;
+}
+
 export function findNearestAvailableDock(
   position: { x: number; y: number },
   zones: ZoneWithSlots[],
@@ -97,6 +112,22 @@ export function findNearestAvailableSlot(
     if (zone.zone_type !== "LANE" && zone.zone_type !== "MIXED") continue;
     for (const slot of zone.slots) {
       if (!isSlotAvailable(slot.id, assets, ignoredAssetId)) continue;
+      const distance = Math.hypot(slot.x - position.x, slot.y - position.y);
+      if (distance <= maximumDistance && (!nearest || distance < nearest.distance)) nearest = { zone, slot, distance };
+    }
+  }
+  return nearest;
+}
+
+export function findNearestSlot(
+  position: { x: number; y: number },
+  zones: ZoneWithSlots[],
+  maximumDistance = 82,
+): { zone: ZoneWithSlots; slot: SlotRow; distance: number } | null {
+  let nearest: { zone: ZoneWithSlots; slot: SlotRow; distance: number } | null = null;
+  for (const zone of zones) {
+    if (zone.zone_type !== "LANE" && zone.zone_type !== "MIXED") continue;
+    for (const slot of zone.slots) {
       const distance = Math.hypot(slot.x - position.x, slot.y - position.y);
       if (distance <= maximumDistance && (!nearest || distance < nearest.distance)) nearest = { zone, slot, distance };
     }
