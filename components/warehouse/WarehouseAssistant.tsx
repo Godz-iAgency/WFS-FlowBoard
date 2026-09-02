@@ -30,7 +30,7 @@ function formatSnapshotTime(value?: string) {
   return parsed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
-export function WarehouseAssistant({ onClose }: { onClose: () => void }) {
+export function WarehouseAssistant({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [messages, setMessages] = useState<AssistantMessage[]>([starterMessage]);
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
@@ -38,8 +38,9 @@ export function WarehouseAssistant({ onClose }: { onClose: () => void }) {
   const messageList = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!open) return;
     messageList.current?.scrollTo?.({ top: messageList.current.scrollHeight, behavior: "smooth" });
-  }, [messages, busy]);
+  }, [messages, busy, open]);
 
   async function ask(rawQuestion: string) {
     const message = rawQuestion.trim();
@@ -89,6 +90,8 @@ export function WarehouseAssistant({ onClose }: { onClose: () => void }) {
       void ask(question);
     }
   }
+
+  if (!open) return null;
 
   return (
     <div className="drawer-backdrop assistant-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>

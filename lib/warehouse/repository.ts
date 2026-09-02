@@ -52,11 +52,18 @@ export async function getBoardSnapshot(
   if (!membershipResult.data) throw new BoardRepositoryError("Warehouse membership could not be verified.", "MEMBERSHIP:NOT_FOUND");
 
   const zoneIds = zoneResult.data.map((zone) => zone.id);
-  const slotResult = zoneIds.length
-    ? await supabase.from("slots").select("*").in("zone_id", zoneIds).eq("is_active", true).order("slot_number")
-    : { data: [], error: null };
+  const activeAssetIds = assetResult.data.filter((asset) => asset.is_active).map((asset) => asset.id);
+  const [slotResult, loadItemResult] = await Promise.all([
+    zoneIds.length
+      ? supabase.from("slots").select("*").in("zone_id", zoneIds).eq("is_active", true).order("slot_number")
+      : Promise.resolve({ data: [], error: null }),
+    activeAssetIds.length
+      ? supabase.from("uld_load_items").select("*").in("asset_id", activeAssetIds).order("created_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+  ]);
 
   if (slotResult.error) throwQueryError("SLOTS", "Warehouse lane slots could not be loaded.", slotResult.error);
+  if (loadItemResult.error) throwQueryError("ULD_LOAD_ITEMS", "ULD mail records could not be loaded.", loadItemResult.error);
 
   const zones: ZoneWithSlots[] = zoneResult.data.map((zone) => ({
     ...zone,
@@ -67,6 +74,7 @@ export async function getBoardSnapshot(
     warehouse,
     zones,
     assets: assetResult.data,
+    uldLoadItems: loadItemResult.data,
     connections: connectionResult.data,
     configurations: configurationResult.data,
     recentEvents: eventResult.data,

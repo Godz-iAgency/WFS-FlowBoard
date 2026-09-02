@@ -8,7 +8,9 @@ export function BoardToolbar({
   snapshot,
   busy,
   canManageConfigurations,
+  elementsOpen,
   onUndo,
+  onElements,
   onSearch,
   onAssistant,
   onSave,
@@ -18,7 +20,9 @@ export function BoardToolbar({
   snapshot: BoardSnapshot;
   busy: boolean;
   canManageConfigurations: boolean;
+  elementsOpen: boolean;
   onUndo: () => void;
+  onElements: () => void;
   onSearch: () => void;
   onAssistant: () => void;
   onSave: () => void;
@@ -33,11 +37,22 @@ export function BoardToolbar({
         <button className="toolbar-button toolbar-button--primary" type="button" onClick={onUndo} disabled={busy}>
           <span aria-hidden="true">↶</span> Undo
         </button>
+        <button className="toolbar-button toolbar-button--elements" type="button" onClick={onElements} aria-expanded={elementsOpen}>
+          <span aria-hidden="true">⊞</span> Elements
+        </button>
         <button className="toolbar-button" type="button" onClick={onSearch}><span aria-hidden="true">⌕</span> Search</button>
         <button className="toolbar-button toolbar-button--assistant" type="button" onClick={onAssistant}><span aria-hidden="true">✦</span> Ask Agent</button>
-        <button className="toolbar-button" type="button" onClick={onHistory}><span aria-hidden="true">≡</span> History</button>
-        {canManageConfigurations ? <button className="toolbar-button" type="button" onClick={onSave}>Save Board</button> : null}
-        {canManageConfigurations ? <button className="toolbar-button" type="button" onClick={onLoad}>Load Configuration</button> : null}
+        <button className="toolbar-button toolbar-button--wide-action" type="button" onClick={onHistory}><span aria-hidden="true">≡</span> History</button>
+        {canManageConfigurations ? <button className="toolbar-button toolbar-button--wide-action" type="button" onClick={onSave}>Save Board</button> : null}
+        {canManageConfigurations ? <button className="toolbar-button toolbar-button--wide-action" type="button" onClick={onLoad}>Load Configuration</button> : null}
+        <details className="toolbar-more">
+          <summary className="toolbar-button" aria-label="More board controls">More <span aria-hidden="true">⌄</span></summary>
+          <div className="toolbar-more-menu">
+            <button type="button" onClick={(event) => { onHistory(); event.currentTarget.closest("details")?.removeAttribute("open"); }}>History</button>
+            {canManageConfigurations ? <button type="button" onClick={(event) => { onSave(); event.currentTarget.closest("details")?.removeAttribute("open"); }}>Save Board</button> : null}
+            {canManageConfigurations ? <button type="button" onClick={(event) => { onLoad(); event.currentTarget.closest("details")?.removeAttribute("open"); }}>Load Configuration</button> : null}
+          </div>
+        </details>
       </div>
       <button
         className={`operational-summary ${summaryOpen ? "operational-summary--open" : ""}`}

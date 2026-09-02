@@ -102,7 +102,7 @@ export function ElementsPanel({ zones, assets, selectedTool, onSelectTool, onCle
   zones: ZoneWithSlots[];
   assets: AssetRow[];
   selectedTool: PlacementTool | null;
-  onSelectTool: (tool: PlacementTool) => void;
+  onSelectTool: (tool: PlacementTool, closePanel?: boolean) => void;
   onClearTool: () => void;
   onDragPreview: (tool: PlacementTool | null, point?: ClientPoint) => void;
   onDropTool: (tool: PlacementTool, point: ClientPoint) => void;
@@ -147,7 +147,7 @@ export function ElementsPanel({ zones, assets, selectedTool, onSelectTool, onCle
               );
             })}
           </div>
-          <PaletteButton tool={activeUldTool} className={`asset-preview ${selectedTool && toolKey(selectedTool) === toolKey(activeUldTool) ? "selected" : ""}`} pressed={selectedTool ? toolKey(selectedTool) === toolKey(activeUldTool) : false} onSelect={onSelectTool} onDragPreview={onDragPreview} onDropTool={onDropTool}>
+          <PaletteButton tool={activeUldTool} className={`asset-preview ${selectedTool && toolKey(selectedTool) === toolKey(activeUldTool) ? "selected" : ""}`} pressed={selectedTool ? toolKey(selectedTool) === toolKey(activeUldTool) : false} onSelect={(tool) => onSelectTool(tool, true)} onDragPreview={onDragPreview} onDropTool={onDropTool}>
             <ApprovedAssetSprite tool={activeUldTool} />
             <strong>{displayedUld}</strong>
           </PaletteButton>
@@ -168,7 +168,7 @@ export function ElementsPanel({ zones, assets, selectedTool, onSelectTool, onCle
             })}
           </div>
           <div ref={equipmentPreview} className="equipment-preview-wrap">
-            <PaletteButton tool={displayedEquipment} className={`asset-preview asset-preview--equipment ${selectedTool && toolKey(selectedTool) === toolKey(displayedEquipment) ? "selected" : ""}`} pressed={selectedTool ? toolKey(selectedTool) === toolKey(displayedEquipment) : false} onSelect={onSelectTool} onDragPreview={onDragPreview} onDropTool={onDropTool}>
+            <PaletteButton tool={displayedEquipment} className={`asset-preview asset-preview--equipment ${selectedTool && toolKey(selectedTool) === toolKey(displayedEquipment) ? "selected" : ""}`} pressed={selectedTool ? toolKey(selectedTool) === toolKey(displayedEquipment) : false} onSelect={(tool) => onSelectTool(tool, true)} onDragPreview={onDragPreview} onDropTool={onDropTool}>
               <ApprovedAssetSprite tool={displayedEquipment} />
               <strong>{equipmentLabel(displayedEquipment)}</strong>
             </PaletteButton>

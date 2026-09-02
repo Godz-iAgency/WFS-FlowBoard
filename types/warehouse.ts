@@ -1,4 +1,4 @@
-import type { AppRole, AssetEventRow, AssetRow, ConfigurationRow, ConnectionRow, SlotRow, TruckType, UldType, WarehouseRow, ZoneRow } from "@/types/database";
+import type { AppRole, AssetEventRow, AssetRow, ConfigurationRow, ConnectionRow, SlotRow, TruckType, UldLoadItemRow, UldType, WarehouseRow, ZoneRow } from "@/types/database";
 
 export const LOGICAL_BOARD_WIDTH = 1600;
 export const LOGICAL_BOARD_HEIGHT = 900;
@@ -11,6 +11,7 @@ export interface BoardSnapshot {
   warehouse: WarehouseRow;
   zones: ZoneWithSlots[];
   assets: AssetRow[];
+  uldLoadItems: UldLoadItemRow[];
   connections: ConnectionRow[];
   configurations: ConfigurationRow[];
   recentEvents: AssetEventRow[];

@@ -32,6 +32,7 @@ function snapshot(assets: AssetRow[]): BoardSnapshot {
       zone({ id: "dock", code: "DD10", name: "DD 10", zone_type: "DOCK", capacity: 1 }),
     ],
     assets,
+    uldLoadItems: [],
     connections: [], configurations: [], recentEvents: [], currentRole: "OPERATOR", fetchedAt: timestamp,
   };
 }

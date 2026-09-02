@@ -31,14 +31,22 @@ describe("warehouse assistant context", () => {
       warehouse: { id: "secret-warehouse-id", name: "WFS Warehouse", code: "WFS-01", created_at: timestamp, updated_at: timestamp },
       zones: [zone("LANE_2", "Lane 2", "LANE", [slot]), zone("MOD_DESK", "MOD Desk", "STATIC")],
       assets: [asset({ id: "secret-asset-id", uld_type: "AKE", destination: "DFW", zone_id: "LANE_2-id", slot_id: slot.id })],
-      connections: [], configurations: [], recentEvents: [], currentRole: "OPERATOR", fetchedAt: timestamp,
+      uldLoadItems: [{ id: "secret-load-id", asset_id: "secret-asset-id", destination_code: "DFW", package_count: 42, description: "Amazon mail", source_reference: "SCAN-17", notes: "Priority", created_at: timestamp, updated_at: timestamp }],
+      connections: [],
+      configurations: [{ id: "secret-configuration-id", warehouse_id: "secret-warehouse-id", name: "Night Sort", description: "Ready state", created_by: "secret-user-id", created_at: timestamp, archived_at: null }],
+      recentEvents: [{ id: "secret-event-id", warehouse_id: "secret-warehouse-id", asset_id: "secret-asset-id", event_type: "MOVED", old_state: { zone_id: null }, new_state: { zone_id: "LANE_2-id", slot_id: "secret-slot-id", uld_type: "AKE" }, user_id: "secret-user-id", user_display_name: "Controller", is_undo: false, reverses_event_id: null, reversed_at: null, reversed_by: null, created_at: timestamp }],
+      currentRole: "OPERATOR", fetchedAt: timestamp,
     };
 
     const context = buildWarehouseAssistantContext(snapshot);
     expect(context.liveAssets[0]).toMatchObject({ label: "AKE", destination: "DFW", location: { zoneCode: "LANE_2", slotNumber: 3 } });
+    expect(context.liveAssets[0].loadSummary).toMatchObject({ recordedItems: 1, packageCount: 42, items: [{ destinationCode: "DFW", sourceReference: "SCAN-17" }] });
+    expect(context.recentActivity[0]).toMatchObject({ performedBy: "Controller", description: "moved AKE: Unassigned to Lane 2 Slot 3" });
+    expect(context.savedConfigurations[0]).toMatchObject({ name: "Night Sort" });
     expect(context.areaPurposes.MOD_DESK).toContain("Manager on Duty");
     expect(JSON.stringify(context)).not.toContain("secret-asset-id");
     expect(JSON.stringify(context)).not.toContain("secret-slot-id");
-    expect(buildWarehouseAssistantInput("Where is AKE?", [], context)).toContain("CURRENT WAREHOUSE SNAPSHOT");
+    expect(JSON.stringify(context)).not.toContain("secret-user-id");
+    expect(buildWarehouseAssistantInput("Where is AKE?", [], context)).toContain("AUTHORIZED LIVE FLOWBOARD DATA");
   });
 });

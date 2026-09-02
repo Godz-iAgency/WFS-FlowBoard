@@ -17,11 +17,13 @@ const AssistantRequest = z.object({
 
 interface GeminiInteractionResponse {
   status?: string;
+  output_text?: string;
   steps?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
   error?: { message?: string };
 }
 
 function extractGeminiText(payload: GeminiInteractionResponse): string | null {
+  if (typeof payload.output_text === "string" && payload.output_text.trim()) return payload.output_text.trim();
   const text = payload.steps
     ?.filter((step) => step.type === "model_output")
     .flatMap((step) => step.content ?? [])
@@ -31,6 +33,23 @@ function extractGeminiText(payload: GeminiInteractionResponse): string | null {
     .join("\n")
     .trim();
   return text || null;
+}
+
+const requestWindows = new Map<string, { startedAt: number; count: number }>();
+const REQUEST_WINDOW_MS = 60_000;
+const REQUESTS_PER_WINDOW = 8;
+
+function retryAfterSeconds(userId: string, now = Date.now()): number | null {
+  const current = requestWindows.get(userId);
+  if (!current || now - current.startedAt >= REQUEST_WINDOW_MS) {
+    requestWindows.set(userId, { startedAt: now, count: 1 });
+    return null;
+  }
+  if (current.count >= REQUESTS_PER_WINDOW) {
+    return Math.max(1, Math.ceil((REQUEST_WINDOW_MS - (now - current.startedAt)) / 1000));
+  }
+  current.count += 1;
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -52,6 +71,15 @@ export async function POST(request: Request) {
     if (claimsError || !claimsData?.claims) {
       return Response.json({ error: "Sign in to use the FlowBoard agent." }, { status: 401 });
     }
+    const userId = claimsData.claims.sub;
+    if (typeof userId !== "string") return Response.json({ error: "Sign in to use the FlowBoard agent." }, { status: 401 });
+    const retryAfter = retryAfterSeconds(userId);
+    if (retryAfter) {
+      return Response.json(
+        { error: `The FlowBoard agent is receiving several questions. Please wait ${retryAfter} seconds and try again.` },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
+    }
     const snapshot = await getBoardSnapshot(supabase, environment.data.warehouseCode);
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) return Response.json({ error: "The FlowBoard agent is not configured yet." }, { status: 503 });
@@ -65,14 +93,17 @@ export async function POST(request: Request) {
         input: buildWarehouseAssistantInput(parsed.data.message, parsed.data.history, context),
         system_instruction: WAREHOUSE_ASSISTANT_INSTRUCTION,
         store: false,
-        generation_config: { temperature: 0.1, max_output_tokens: 700 },
+        generation_config: { thinking_level: "low", max_output_tokens: 700 },
       }),
       signal: AbortSignal.timeout(25_000),
       cache: "no-store",
     });
-    const payload = await geminiResponse.json() as GeminiInteractionResponse;
+    const payload = await geminiResponse.json().catch(() => ({})) as GeminiInteractionResponse;
     if (!geminiResponse.ok) {
       console.error("Gemini warehouse assistant request failed", { status: geminiResponse.status, message: payload.error?.message });
+      if (geminiResponse.status === 429) {
+        return Response.json({ error: "The free Gemini allowance is temporarily busy. Wait a moment and ask again." }, { status: 429 });
+      }
       return Response.json({ error: "The FlowBoard agent could not answer right now. Please try again." }, { status: 502 });
     }
     const answer = extractGeminiText(payload);

@@ -45,6 +45,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
   const [toast, setToast] = useState<{ message: string; error: boolean } | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [elementsOpen, setElementsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
@@ -194,7 +195,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
     return placed;
   }
 
-  function choosePlacementTool(tool: PlacementTool) {
+  function choosePlacementTool(tool: PlacementTool, closePanel = false) {
     setSelectedAssetId(null);
     setPlacementTarget(null);
     setPlacementTool(tool);
@@ -206,6 +207,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
           ? `${tool.aircraftType.slice(1)} aircraft selected. Placement is disabled until its approved operating area is defined.`
           : "Tap or drag the tug into the highlighted warehouse movement area.";
     notify(instruction, tool.category === "AIRCRAFT");
+    if (closePanel) setElementsOpen(false);
   }
 
   function updateDragPreview(tool: PlacementTool | null, point?: ClientPoint) {
@@ -235,6 +237,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
         notify("Drop the ULD over an available lane or Mixed Area position.", true);
         return;
       }
+      setElementsOpen(false);
       void placeUld(tool.uldType, target.zone, target.slot);
       return;
     }
@@ -244,6 +247,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
         notify("Drop the truck over an available DD06–DD15 truck target.", true);
         return;
       }
+      setElementsOpen(false);
       void placeTruck(tool.truckType, dock);
       return;
     }
@@ -256,6 +260,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
       notify("Drop the tug inside the warehouse movement area.", true);
       return;
     }
+    setElementsOpen(false);
     void placeTug(movementZone, logical);
   }
 
@@ -395,9 +400,22 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
         </div>
       ) : null}
 
-      <BoardToolbar snapshot={snapshot} busy={busy} canManageConfigurations={canManageConfigurations} onUndo={handleUndo} onSearch={() => setSearchOpen(true)} onAssistant={() => setAssistantOpen(true)} onSave={() => setSaveOpen(true)} onLoad={() => setLoadOpen(true)} onHistory={() => setHistoryOpen(true)} />
+      <BoardToolbar
+        snapshot={snapshot}
+        busy={busy}
+        canManageConfigurations={canManageConfigurations}
+        elementsOpen={elementsOpen}
+        onUndo={handleUndo}
+        onElements={() => setElementsOpen((open) => !open)}
+        onSearch={() => { setElementsOpen(false); setSearchOpen(true); }}
+        onAssistant={() => { setElementsOpen(false); setAssistantOpen(true); }}
+        onSave={() => { setElementsOpen(false); setSaveOpen(true); }}
+        onLoad={() => { setElementsOpen(false); setLoadOpen(true); }}
+        onHistory={() => { setElementsOpen(false); setHistoryOpen(true); }}
+      />
 
-      <div className="workspace">
+      <div className={`workspace ${elementsOpen ? "workspace--elements-open" : ""}`}>
+        {elementsOpen ? <button className="tablet-elements-backdrop" type="button" aria-label="Close Elements panel" onClick={() => setElementsOpen(false)} /> : null}
         <ElementsPanel zones={snapshot.zones} assets={snapshot.assets} selectedTool={placementTool} onSelectTool={choosePlacementTool} onClearTool={clearPlacementTool} onDragPreview={updateDragPreview} onDropTool={handlePaletteDrop} />
         <section className="board-region" aria-label="Warehouse floor plan">
           <WarehouseBoard
@@ -424,7 +442,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
       {selectedAsset ? <AssetActionSheet asset={selectedAsset} zone={selectedZone} connection={selectedConnection} busy={busy} onClose={() => setSelectedAssetId(null)} onRotate={handleRotate} onDestination={handleDestination} onTruckStatus={handleTruckStatus} onRequestDepart={requestDepart} onRequestRemove={requestRemove} onRequestConnect={(asset) => setConnectingTugId(asset.id)} onDisconnect={handleDisconnect} /> : null}
       {connectingTug ? <ConnectTugDialog tug={connectingTug} ulds={connectableUlds} zones={snapshot.zones} busy={busy} onClose={() => setConnectingTugId(null)} onConnect={(tug, uld) => void handleConnect(tug, uld)} /> : null}
       {searchOpen ? <SearchPanel snapshot={snapshot} onClose={() => setSearchOpen(false)} onLocate={handleLocate} /> : null}
-      {assistantOpen ? <WarehouseAssistant onClose={() => setAssistantOpen(false)} /> : null}
+      <WarehouseAssistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       {historyOpen ? <HistoryPanel snapshot={snapshot} onClose={() => setHistoryOpen(false)} /> : null}
       {saveOpen ? <SaveBoardDialog busy={busy} onClose={() => setSaveOpen(false)} onSave={(name, description) => void handleSave(name, description)} /> : null}
       {loadOpen ? <LoadConfigurationDialog configurations={snapshot.configurations} onClose={() => setLoadOpen(false)} onChoose={requestConfigurationLoad} /> : null}

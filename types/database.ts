@@ -43,6 +43,11 @@ export type AppSettingRow = { id: string; warehouse_id: string; key: string; val
 export type ConfigurationRow = { id: string; warehouse_id: string; name: string; description: string | null; created_by: string | null; created_at: string; archived_at: string | null };
 export type ConfigurationAssetRow = { id: string; configuration_id: string; source_asset_id: string | null; asset_snapshot: Json; created_at: string };
 export type ConfigurationConnectionRow = { id: string; configuration_id: string; connection_snapshot: Json; created_at: string };
+export type UldLoadItemRow = {
+  id: string; asset_id: string; destination_code: string | null; package_count: number | null;
+  description: string | null; source_reference: string | null; notes: string | null;
+  created_at: string; updated_at: string;
+};
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Insert>> = { Row: Row; Insert: Insert; Update: Update; Relationships: [] };
 
@@ -56,7 +61,7 @@ export interface Database {
       slots: Table<SlotRow>;
       assets: Table<AssetRow>;
       asset_connections: Table<ConnectionRow>;
-      uld_load_items: Table<{ id: string; asset_id: string; destination_code: string | null; package_count: number | null; description: string | null; source_reference: string | null; notes: string | null; created_at: string; updated_at: string }>;
+      uld_load_items: Table<UldLoadItemRow>;
       asset_events: Table<AssetEventRow>;
       configurations: Table<ConfigurationRow>;
       configuration_assets: Table<ConfigurationAssetRow>;
