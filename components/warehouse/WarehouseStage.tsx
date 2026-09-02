@@ -7,10 +7,19 @@ import {
   dockIndicatorColor, findNearestAvailableDock, findNearestAvailableSlot, getDockTruck,
   getZoneOccupancy, isPointInsideZone,
 } from "@/lib/warehouse/selectors";
+import {
+  logicalToPresentationX,
+  logicalWidthToPresentation,
+  PRESENTATION_BOARD_HEIGHT,
+  PRESENTATION_BOARD_WIDTH,
+  PRESENTATION_FLOOR_LEFT,
+  PRESENTATION_FLOOR_RIGHT,
+  presentationToLogicalX,
+  projectZone,
+} from "@/lib/warehouse/board-projection";
 import type { AssetRow, SlotRow, TruckType, UldType } from "@/types/database";
 import {
-  LOGICAL_BOARD_HEIGHT, LOGICAL_BOARD_WIDTH, type BoardHighlight, type BoardSnapshot,
-  type PlacementTool, type ZoneWithSlots,
+  type BoardHighlight, type BoardSnapshot, type PlacementTool, type ZoneWithSlots,
 } from "@/types/warehouse";
 
 const NAVY = "#082e60";
@@ -33,7 +42,6 @@ const ULD_CROPS: Record<UldType, Crop> = {
 };
 
 const REFERENCE_CROPS = {
-  compass: { x: 1587, y: 0, width: 43, height: 58 },
   boxTruck: { x: 61, y: 286, width: 142, height: 62 },
   trailer: { x: 37, y: 214, width: 236, height: 70 },
   office: { x: 982, y: 847, width: 89, height: 49 },
@@ -182,9 +190,10 @@ function DockZone({ zone, truck, candidate, highlighting, highlighted, pulse, on
 }) {
   const indicator = dockIndicatorColor(truck);
   const targetStroke = candidate ? AVAILABLE : highlighting && !truck ? AVAILABLE : truck ? "#c0cad3" : "#9fadb9";
+  const targetWidth = logicalWidthToPresentation(162);
   return (
     <Group onMouseEnter={(event) => { if (!truck) setPointerCursor(event, "pointer"); }} onMouseLeave={(event) => setPointerCursor(event, "default")} onClick={(event) => { event.cancelBubble = true; if (!truck) onChoose(); }} onTap={(event) => { event.cancelBubble = true; if (!truck) onChoose(); }}>
-      <Rect x={zone.x} y={zone.y} width={286} height={zone.height} stroke={highlighted ? SEARCH : "#c2ccd5"} strokeWidth={highlighted ? 5 : 1} fill="rgba(255,255,255,.30)" shadowColor={highlighted ? SEARCH : undefined} shadowBlur={highlighted ? (pulse ? 20 : 9) : 0} />
+      <Rect x={zone.x} y={zone.y} width={zone.width + logicalWidthToPresentation(176)} height={zone.height} stroke={highlighted ? SEARCH : "#c2ccd5"} strokeWidth={highlighted ? 5 : 1} fill="rgba(255,255,255,.30)" shadowColor={highlighted ? SEARCH : undefined} shadowBlur={highlighted ? (pulse ? 20 : 9) : 0} />
       <Rect x={zone.x + 12} y={zone.y + 14} width={58} height={30} fill={NAVY} cornerRadius={4} />
       <Text listening={false} x={zone.x + 12} y={zone.y + 20} width={58} text={zone.code.replace("DD", "DD ")} fill="white" fontSize={15} fontStyle="bold" align="center" />
       <Rect listening={false} x={zone.x + zone.width - 8} y={zone.y + 5} width={14} height={zone.height - 10} fill={GOLD} stroke="#8a6a00" strokeWidth={1} cornerRadius={2} shadowColor="#927000" shadowBlur={2} />
@@ -192,7 +201,7 @@ function DockZone({ zone, truck, candidate, highlighting, highlighted, pulse, on
       <Rect
         x={zone.x + zone.width + 16}
         y={zone.y + 5}
-        width={162}
+        width={targetWidth}
         height={zone.height - 10}
         stroke={targetStroke}
         strokeWidth={candidate ? 4 : highlighting && !truck ? 2 : 1}
@@ -202,25 +211,6 @@ function DockZone({ zone, truck, candidate, highlighting, highlighted, pulse, on
         shadowColor={candidate ? AVAILABLE : undefined}
         shadowBlur={candidate ? 13 : 0}
       />
-    </Group>
-  );
-}
-
-function CompassRose({ image }: { image: HTMLImageElement | null }) {
-  if (image) {
-    return (
-      <Group x={12} y={8} listening={false}>
-        <Rect x={0} y={0} width={48} height={62} fill={NAVY} cornerRadius={5} />
-        <ReferenceSprite image={image} crop={REFERENCE_CROPS.compass} x={6} y={3} width={36} height={54} />
-      </Group>
-    );
-  }
-  return (
-    <Group x={15} y={14} listening={false}>
-      <Text x={0} y={0} width={34} text="N" fill={NAVY} fontSize={16} fontStyle="bold" align="center" />
-      <Line points={[17, 20, 30, 53, 17, 45]} closed fill={NAVY} stroke={NAVY} strokeWidth={2} lineJoin="round" />
-      <Line points={[17, 20, 4, 53, 17, 45]} closed fill="#ffffff" stroke={NAVY} strokeWidth={2} lineJoin="round" />
-      <Line points={[17, 20, 17, 47]} stroke={NAVY} strokeWidth={1.5} />
     </Group>
   );
 }
@@ -277,7 +267,7 @@ function StaticZone({ zone, image }: { zone: ZoneWithSlots; image: HTMLImageElem
       <Group listening={false}>
         <Rect x={zone.x} y={zone.y} width={zone.width} height={zone.height} fill="rgba(222,232,241,.78)" stroke="#263c50" strokeWidth={3} />
         <Text x={zone.x + 4} y={zone.y + 14} width={zone.width - 8} text={"CONTROL\nOFFICE"} fill={NAVY} fontSize={17} lineHeight={1.05} fontStyle="bold" align="center" />
-        <ReferenceSprite image={image} crop={REFERENCE_CROPS.office} x={zone.x + 28} y={zone.y + 59} width={80} height={44} />
+        <ReferenceSprite image={image} crop={REFERENCE_CROPS.office} x={zone.x + (zone.width - 80) / 2} y={zone.y + 59} width={80} height={44} />
       </Group>
     );
   }
@@ -351,10 +341,12 @@ function UldAsset({ asset, image, x, y, selected, highlighted, pulse, draggable,
   );
 }
 
-function TruckAsset({ asset, image, zone, selected, highlighted, pulse, draggable, onSelect, onDragStart, onDragMove, onDragEnd }: {
+function TruckAsset({ asset, image, zone, x, y, selected, highlighted, pulse, draggable, onSelect, onDragStart, onDragMove, onDragEnd }: {
   asset: AssetRow;
   image: HTMLImageElement | null;
   zone: ZoneWithSlots;
+  x: number;
+  y: number;
   selected: boolean;
   highlighted: boolean;
   pulse: boolean;
@@ -369,7 +361,7 @@ function TruckAsset({ asset, image, zone, selected, highlighted, pulse, draggabl
   const crop = isBox ? REFERENCE_CROPS.boxTruck : REFERENCE_CROPS.trailer;
   const emphasized = selected || highlighted;
   return (
-    <Group x={zone.x + zone.width + 20} y={zone.y + 7} draggable={draggable} onMouseEnter={(event) => setPointerCursor(event, draggable ? "grab" : "pointer")} onMouseLeave={(event) => setPointerCursor(event, "default")} onClick={(event) => { event.cancelBubble = true; onSelect(); }} onTap={(event) => { event.cancelBubble = true; onSelect(); }} onDragStart={(event) => { setPointerCursor(event, "grabbing"); onDragStart(event); }} onDragMove={onDragMove} onDragEnd={(event) => { setPointerCursor(event, "grab"); onDragEnd(event); }}>
+    <Group x={x} y={y} draggable={draggable} onMouseEnter={(event) => setPointerCursor(event, draggable ? "grab" : "pointer")} onMouseLeave={(event) => setPointerCursor(event, "default")} onClick={(event) => { event.cancelBubble = true; onSelect(); }} onTap={(event) => { event.cancelBubble = true; onSelect(); }} onDragStart={(event) => { setPointerCursor(event, "grabbing"); onDragStart(event); }} onDragMove={onDragMove} onDragEnd={(event) => { setPointerCursor(event, "grab"); onDragEnd(event); }}>
       {emphasized ? <Rect x={-7} y={-4} width={width + 14} height={zone.height - 6} stroke={highlighted ? SEARCH : GOLD} strokeWidth={highlighted ? (pulse ? 5 : 3) : 4} cornerRadius={8} shadowColor={highlighted ? SEARCH : GOLD} shadowBlur={12} /> : null}
       <ReferenceSprite image={image} crop={crop} x={0} y={0} width={width} height={zone.height - 14} />
       {asset.external_identifier ? <Text x={4} y={zone.height - 21} width={width - 8} text={asset.external_identifier} fill={NAVY} fontSize={8} fontStyle="bold" align="center" /> : null}
@@ -377,9 +369,11 @@ function TruckAsset({ asset, image, zone, selected, highlighted, pulse, draggabl
   );
 }
 
-function TugAsset({ asset, image, selected, highlighted, pulse, draggable, onSelect, onDragStart, onDragEnd }: {
+function TugAsset({ asset, image, x, y, selected, highlighted, pulse, draggable, onSelect, onDragStart, onDragEnd }: {
   asset: AssetRow;
   image: HTMLImageElement | null;
+  x: number;
+  y: number;
   selected: boolean;
   highlighted: boolean;
   pulse: boolean;
@@ -388,10 +382,9 @@ function TugAsset({ asset, image, selected, highlighted, pulse, draggable, onSel
   onDragStart: (event: KonvaEventObject<DragEvent>) => void;
   onDragEnd: (event: KonvaEventObject<DragEvent>) => void;
 }) {
-  if (asset.x_position === null || asset.y_position === null) return null;
   const emphasized = selected || highlighted;
   return (
-    <Group x={asset.x_position} y={asset.y_position} draggable={draggable} onMouseEnter={(event) => setPointerCursor(event, draggable ? "grab" : "pointer")} onMouseLeave={(event) => setPointerCursor(event, "default")} onClick={(event) => { event.cancelBubble = true; onSelect(); }} onTap={(event) => { event.cancelBubble = true; onSelect(); }} onDragStart={(event) => { setPointerCursor(event, "grabbing"); onDragStart(event); }} onDragEnd={(event) => { setPointerCursor(event, "grab"); onDragEnd(event); }}>
+    <Group x={x} y={y} draggable={draggable} onMouseEnter={(event) => setPointerCursor(event, draggable ? "grab" : "pointer")} onMouseLeave={(event) => setPointerCursor(event, "default")} onClick={(event) => { event.cancelBubble = true; onSelect(); }} onTap={(event) => { event.cancelBubble = true; onSelect(); }} onDragStart={(event) => { setPointerCursor(event, "grabbing"); onDragStart(event); }} onDragEnd={(event) => { setPointerCursor(event, "grab"); onDragEnd(event); }}>
       {emphasized ? <Rect x={-36} y={-45} width={72} height={90} stroke={highlighted ? SEARCH : GOLD} strokeWidth={highlighted ? (pulse ? 5 : 3) : 4} cornerRadius={8} shadowColor={highlighted ? SEARCH : GOLD} shadowBlur={12} /> : null}
       <Group rotation={asset.orientation_degrees === 180 ? 180 : 0}>
         {image ? <KonvaImage image={image} x={-34} y={-43} width={68} height={86} /> : <Rect x={-30} y={-39} width={60} height={78} fill="#f7f7f1" stroke="#45535f" cornerRadius={5} />}
@@ -420,7 +413,7 @@ export function WarehouseStage({ snapshot, selectedAssetId, highlight, canIntera
   const containerRef = useRef<HTMLDivElement>(null);
   const image = useImageAsset(PLAN_IMAGE);
   const tugImage = useImageAsset(TUG_IMAGE);
-  const [size, setSize] = useState({ width: 1200, height: 675 });
+  const [size, setSize] = useState({ width: 1400, height: 630 });
   const [draggingAssetId, setDraggingAssetId] = useState<string | null>(null);
   const [draggingCategory, setDraggingCategory] = useState<AssetRow["asset_category"] | null>(null);
   const [candidateSlotId, setCandidateSlotId] = useState<string | null>(null);
@@ -433,8 +426,8 @@ export function WarehouseStage({ snapshot, selectedAssetId, highlight, canIntera
     const observer = new ResizeObserver(([entry]) => {
       const availableWidth = Math.max(1, entry.contentRect.width);
       const availableHeight = Math.max(1, entry.contentRect.height);
-      const fittedScale = Math.min(availableWidth / LOGICAL_BOARD_WIDTH, availableHeight / LOGICAL_BOARD_HEIGHT);
-      setSize({ width: LOGICAL_BOARD_WIDTH * fittedScale, height: LOGICAL_BOARD_HEIGHT * fittedScale });
+      const fittedScale = Math.min(availableWidth / PRESENTATION_BOARD_WIDTH, availableHeight / PRESENTATION_BOARD_HEIGHT);
+      setSize({ width: PRESENTATION_BOARD_WIDTH * fittedScale, height: PRESENTATION_BOARD_HEIGHT * fittedScale });
     });
     observer.observe(frame);
     return () => observer.disconnect();
@@ -447,11 +440,12 @@ export function WarehouseStage({ snapshot, selectedAssetId, highlight, canIntera
   }, [highlight]);
 
   const activeAssets = useMemo(() => snapshot.assets.filter((asset) => asset.is_active), [snapshot.assets]);
-  const positionZones = useMemo(() => snapshot.zones.filter((zone) => zone.zone_type === "LANE" || zone.zone_type === "MIXED"), [snapshot.zones]);
-  const dockZones = useMemo(() => snapshot.zones.filter((zone) => zone.zone_type === "DOCK"), [snapshot.zones]);
-  const movementZone = useMemo(() => snapshot.zones.find((zone) => zone.zone_type === "FREE_MOVEMENT"), [snapshot.zones]);
-  const zoneById = useMemo(() => new Map(snapshot.zones.map((zone) => [zone.id, zone])), [snapshot.zones]);
-  const slotById = useMemo(() => new Map(snapshot.zones.flatMap((zone) => zone.slots).map((slot) => [slot.id, slot])), [snapshot.zones]);
+  const projectedZones = useMemo(() => snapshot.zones.map(projectZone), [snapshot.zones]);
+  const positionZones = useMemo(() => projectedZones.filter((zone) => zone.zone_type === "LANE" || zone.zone_type === "MIXED"), [projectedZones]);
+  const dockZones = useMemo(() => projectedZones.filter((zone) => zone.zone_type === "DOCK"), [projectedZones]);
+  const movementZone = useMemo(() => projectedZones.find((zone) => zone.zone_type === "FREE_MOVEMENT"), [projectedZones]);
+  const zoneById = useMemo(() => new Map(projectedZones.map((zone) => [zone.id, zone])), [projectedZones]);
+  const slotById = useMemo(() => new Map(projectedZones.flatMap((zone) => zone.slots).map((slot) => [slot.id, slot])), [projectedZones]);
   const connectedAssetIds = useMemo(() => new Set(snapshot.connections.filter((connection) => connection.is_active).flatMap((connection) => [connection.parent_asset_id, connection.child_asset_id])), [snapshot.connections]);
   const occupiedSlotIds = useMemo(() => new Set(activeAssets.filter((asset) => asset.asset_category === "ULD" && asset.slot_id && asset.id !== draggingAssetId).map((asset) => asset.slot_id as string)), [activeAssets, draggingAssetId]);
   const assetPositions = useMemo(() => {
@@ -460,11 +454,11 @@ export function WarehouseStage({ snapshot, selectedAssetId, highlight, canIntera
       if (asset.slot_id) {
         const slot = slotById.get(asset.slot_id);
         if (slot) positions.set(asset.id, { x: slot.x, y: slot.y });
-      } else if (asset.x_position !== null && asset.y_position !== null) positions.set(asset.id, { x: asset.x_position, y: asset.y_position });
+      } else if (asset.x_position !== null && asset.y_position !== null) positions.set(asset.id, { x: logicalToPresentationX(asset.x_position), y: asset.y_position });
     }
     return positions;
   }, [activeAssets, slotById]);
-  const scale = size.width / LOGICAL_BOARD_WIDTH;
+  const scale = size.width / PRESENTATION_BOARD_WIDTH;
   const highlightingSlots = draggingCategory === "ULD" || placementTool?.category === "ULD";
   const highlightingDocks = draggingCategory === "TRUCK" || placementTool?.category === "TRUCK";
 
@@ -522,7 +516,7 @@ export function WarehouseStage({ snapshot, selectedAssetId, highlight, canIntera
       onMessage("Move rejected: the tug must remain inside the warehouse movement area.");
       return;
     }
-    const saved = await onMoveTug(asset, movementZone, position);
+    const saved = await onMoveTug(asset, movementZone, { x: presentationToLogicalX(position.x), y: position.y });
     if (!saved) event.target.position(origin);
   }
 
@@ -556,24 +550,24 @@ export function WarehouseStage({ snapshot, selectedAssetId, highlight, canIntera
       onMessage("Tap or drop the tug inside the warehouse movement area.");
       return;
     }
-    void onPlaceTug(movementZone, position);
+    void onPlaceTug(movementZone, { x: presentationToLogicalX(position.x), y: position.y });
   }
 
   return (
     <div ref={containerRef} className="stage-container" data-warehouse-stage style={{ width: size.width, height: size.height }}>
       <Stage width={size.width} height={size.height} aria-label="Interactive WFS warehouse floor plan" role="application">
         <Layer scaleX={scale} scaleY={scale}>
-          <Rect width={LOGICAL_BOARD_WIDTH} height={LOGICAL_BOARD_HEIGHT} fillLinearGradientStartPoint={{ x: 0, y: 0 }} fillLinearGradientEndPoint={{ x: LOGICAL_BOARD_WIDTH, y: LOGICAL_BOARD_HEIGHT }} fillLinearGradientColorStops={[0, "#eef3f7", 0.48, "#f8fafc", 1, "#e1e8ef"]} onClick={handleFloorPointer} onTap={handleFloorPointer} />
-          <Rect listening={false} x={280} y={64} width={1248} height={816} fill="rgba(248,250,252,.78)" stroke="#172d41" strokeWidth={5} shadowColor="#607386" shadowBlur={12} shadowOpacity={0.2} />
-          <Line listening={false} points={[420, 110, 1210, 110]} stroke={NAVY} strokeWidth={2} dash={[14, 10]} opacity={0.78} />
-          <Line listening={false} points={[450, 145, 450, 660]} stroke="#cfd8e1" strokeWidth={1} />
-          {[650, 825, 1000, 1175].map((x) => <Line listening={false} key={x} points={[x, 145, x, 575]} stroke="#cfd8e1" strokeWidth={1} />)}
-          {[475, 650, 825, 1000, 1175].map((x) => <Arrow listening={false} key={x} points={[x, 320, x, 340]} pointerAtBeginning stroke={LIGHT_NAVY} fill={LIGHT_NAVY} pointerWidth={6} pointerLength={6} strokeWidth={1.7} opacity={0.85} />)}
+          <Rect width={PRESENTATION_BOARD_WIDTH} height={PRESENTATION_BOARD_HEIGHT} fillLinearGradientStartPoint={{ x: 0, y: 0 }} fillLinearGradientEndPoint={{ x: PRESENTATION_BOARD_WIDTH, y: PRESENTATION_BOARD_HEIGHT }} fillLinearGradientColorStops={[0, "#eef3f7", 0.48, "#f8fafc", 1, "#e1e8ef"]} onClick={handleFloorPointer} onTap={handleFloorPointer} />
+          <Rect listening={false} x={PRESENTATION_FLOOR_LEFT} y={64} width={PRESENTATION_FLOOR_RIGHT - PRESENTATION_FLOOR_LEFT} height={816} fill="rgba(248,250,252,.78)" stroke="#172d41" strokeWidth={5} shadowColor="#607386" shadowBlur={12} shadowOpacity={0.2} />
+          <Line listening={false} points={[logicalToPresentationX(420), 110, logicalToPresentationX(1210), 110]} stroke={NAVY} strokeWidth={2} dash={[14, 10]} opacity={0.78} />
+          <Line listening={false} points={[logicalToPresentationX(450), 145, logicalToPresentationX(450), 660]} stroke="#cfd8e1" strokeWidth={1} />
+          {[650, 825, 1000, 1175].map((x) => <Line listening={false} key={x} points={[logicalToPresentationX(x), 145, logicalToPresentationX(x), 575]} stroke="#cfd8e1" strokeWidth={1} />)}
+          {[475, 650, 825, 1000, 1175].map((x) => <Arrow listening={false} key={x} points={[logicalToPresentationX(x), 320, logicalToPresentationX(x), 340]} pointerAtBeginning stroke={LIGHT_NAVY} fill={LIGHT_NAVY} pointerWidth={6} pointerLength={6} strokeWidth={1.7} opacity={0.85} />)}
 
           {movementZone && placementTool?.category === "TUG" ? <Rect listening={false} x={movementZone.x} y={movementZone.y} width={movementZone.width} height={movementZone.height} stroke={AVAILABLE} strokeWidth={3} dash={[12, 8]} fill="rgba(45,165,104,.05)" cornerRadius={8} /> : null}
-          {snapshot.zones.filter((zone) => zone.zone_type === "STATIC").map((zone) => <StaticZone key={zone.id} zone={zone} image={image} />)}
-          {snapshot.zones.filter((zone) => zone.zone_type === "LANE").map((zone) => <LaneZone key={zone.id} zone={zone} assets={activeAssets} occupiedSlotIds={occupiedSlotIds} highlightingSlots={highlightingSlots} candidateSlotId={candidateSlotId} highlighted={highlight?.type === "zone" && highlight.id === zone.id} pulse={pulse} onChooseSlot={chooseSlot} />)}
-          {snapshot.zones.filter((zone) => zone.zone_type === "MIXED").map((zone) => <MixedZone key={zone.id} zone={zone} assets={activeAssets} occupiedSlotIds={occupiedSlotIds} highlightingSlots={highlightingSlots} candidateSlotId={candidateSlotId} highlighted={highlight?.type === "zone" && highlight.id === zone.id} pulse={pulse} onChooseSlot={chooseSlot} />)}
+          {projectedZones.filter((zone) => zone.zone_type === "STATIC").map((zone) => <StaticZone key={zone.id} zone={zone} image={image} />)}
+          {projectedZones.filter((zone) => zone.zone_type === "LANE").map((zone) => <LaneZone key={zone.id} zone={zone} assets={activeAssets} occupiedSlotIds={occupiedSlotIds} highlightingSlots={highlightingSlots} candidateSlotId={candidateSlotId} highlighted={highlight?.type === "zone" && highlight.id === zone.id} pulse={pulse} onChooseSlot={chooseSlot} />)}
+          {projectedZones.filter((zone) => zone.zone_type === "MIXED").map((zone) => <MixedZone key={zone.id} zone={zone} assets={activeAssets} occupiedSlotIds={occupiedSlotIds} highlightingSlots={highlightingSlots} candidateSlotId={candidateSlotId} highlighted={highlight?.type === "zone" && highlight.id === zone.id} pulse={pulse} onChooseSlot={chooseSlot} />)}
           {dockZones.map((zone) => <DockZone key={zone.id} zone={zone} truck={getDockTruck(zone.id, activeAssets)} candidate={candidateDockId === zone.id} highlighting={highlightingDocks} highlighted={highlight?.type === "zone" && highlight.id === zone.id} pulse={pulse} onChoose={() => chooseDock(zone)} />)}
 
           {snapshot.connections.filter((connection) => connection.is_active).map((connection) => {
@@ -597,16 +591,15 @@ export function WarehouseStage({ snapshot, selectedAssetId, highlight, canIntera
               const zone = zoneById.get(asset.zone_id);
               if (!zone) return null;
               const origin = { x: zone.x + zone.width + 20, y: zone.y + 7 };
-              return <TruckAsset key={asset.id} asset={asset} image={image} zone={zone} selected={selectedAssetId === asset.id} highlighted={highlighted} pulse={pulse} draggable={canInteract} onSelect={() => onSelectAsset(asset.id)} onDragStart={(event) => { event.cancelBubble = true; setDraggingAssetId(asset.id); setDraggingCategory("TRUCK"); updateDockCandidate(asset, event); }} onDragMove={(event) => updateDockCandidate(asset, event)} onDragEnd={(event) => { void finishTruckDrag(asset, origin, event); }} />;
+              return <TruckAsset key={asset.id} asset={asset} image={image} zone={zone} x={origin.x} y={origin.y} selected={selectedAssetId === asset.id} highlighted={highlighted} pulse={pulse} draggable={canInteract} onSelect={() => onSelectAsset(asset.id)} onDragStart={(event) => { event.cancelBubble = true; setDraggingAssetId(asset.id); setDraggingCategory("TRUCK"); updateDockCandidate(asset, event); }} onDragMove={(event) => updateDockCandidate(asset, event)} onDragEnd={(event) => { void finishTruckDrag(asset, origin, event); }} />;
             }
             if (asset.asset_category === "TUG") {
-              const origin = { x: asset.x_position ?? 0, y: asset.y_position ?? 0 };
-              return <TugAsset key={asset.id} asset={asset} image={tugImage} selected={selectedAssetId === asset.id} highlighted={highlighted} pulse={pulse} draggable={canInteract && !connectedAssetIds.has(asset.id)} onSelect={() => onSelectAsset(asset.id)} onDragStart={(event) => { event.cancelBubble = true; setDraggingAssetId(asset.id); setDraggingCategory("TUG"); }} onDragEnd={(event) => { void finishTugDrag(asset, origin, event); }} />;
+              if (asset.x_position === null || asset.y_position === null) return null;
+              const origin = { x: logicalToPresentationX(asset.x_position), y: asset.y_position };
+              return <TugAsset key={asset.id} asset={asset} image={tugImage} x={origin.x} y={origin.y} selected={selectedAssetId === asset.id} highlighted={highlighted} pulse={pulse} draggable={canInteract && !connectedAssetIds.has(asset.id)} onSelect={() => onSelectAsset(asset.id)} onDragStart={(event) => { event.cancelBubble = true; setDraggingAssetId(asset.id); setDraggingCategory("TUG"); }} onDragEnd={(event) => { void finishTugDrag(asset, origin, event); }} />;
             }
             return null;
           })}
-
-          <CompassRose image={image} />
         </Layer>
       </Stage>
     </div>

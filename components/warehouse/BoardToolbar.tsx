@@ -4,6 +4,19 @@ import { useState } from "react";
 import { getOperationalSummary } from "@/lib/warehouse/selectors";
 import type { BoardSnapshot } from "@/types/warehouse";
 
+function NorthCompass() {
+  return (
+    <div className="toolbar-compass" role="img" aria-label="North compass">
+      <span>N</span>
+      <svg viewBox="0 0 28 34" aria-hidden="true">
+        <path className="toolbar-compass__north" d="M14 1 25 31 14 24Z" />
+        <path className="toolbar-compass__south" d="M14 1 3 31 14 24Z" />
+        <path className="toolbar-compass__needle" d="M14 3v22" />
+      </svg>
+    </div>
+  );
+}
+
 export function BoardToolbar({
   snapshot,
   busy,
@@ -53,6 +66,7 @@ export function BoardToolbar({
             {canManageConfigurations ? <button type="button" onClick={(event) => { onLoad(); event.currentTarget.closest("details")?.removeAttribute("open"); }}>Load Configuration</button> : null}
           </div>
         </details>
+        <NorthCompass />
       </div>
       <button
         className={`operational-summary ${summaryOpen ? "operational-summary--open" : ""}`}

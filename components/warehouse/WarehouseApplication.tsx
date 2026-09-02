@@ -21,9 +21,10 @@ import {
   connectTow, createAsset, disconnectTow, loadBoardConfiguration, moveAsset, saveBoardConfiguration, softRemoveAsset,
   undoLastAction, updateTruckStatus, updateUldDestination,
 } from "@/lib/warehouse/mutations";
+import { PRESENTATION_BOARD_HEIGHT, PRESENTATION_BOARD_WIDTH, presentationToLogicalX } from "@/lib/warehouse/board-projection";
 import { findNearestAvailableDock, findNearestAvailableSlot, isPointInsideZone, type SearchResult } from "@/lib/warehouse/selectors";
 import type { AssetRow, ConfigurationRow, ConnectionRow, SlotRow, TruckStatus, TruckType, UldType } from "@/types/database";
-import { LOGICAL_BOARD_HEIGHT, LOGICAL_BOARD_WIDTH, type BoardHighlight, type BoardSnapshot, type ClientPoint, type PlacementTool, type ZoneWithSlots } from "@/types/warehouse";
+import { type BoardHighlight, type BoardSnapshot, type ClientPoint, type PlacementTool, type ZoneWithSlots } from "@/types/warehouse";
 
 interface ConfirmState {
   title: string;
@@ -225,10 +226,11 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
       notify("Drop the asset onto a highlighted warehouse target.", true);
       return;
     }
-    const logical = {
-      x: (point.x - bounds.left) * (LOGICAL_BOARD_WIDTH / bounds.width),
-      y: (point.y - bounds.top) * (LOGICAL_BOARD_HEIGHT / bounds.height),
+    const presentation = {
+      x: (point.x - bounds.left) * (PRESENTATION_BOARD_WIDTH / bounds.width),
+      y: (point.y - bounds.top) * (PRESENTATION_BOARD_HEIGHT / bounds.height),
     };
+    const logical = { x: presentationToLogicalX(presentation.x), y: presentation.y };
     const liveAssets = snapshot.assets.filter((asset) => asset.is_active);
     if (tool.category === "ULD") {
       const zones = snapshot.zones.filter((zone) => zone.zone_type === "LANE" || zone.zone_type === "MIXED");
@@ -435,7 +437,7 @@ export function WarehouseApplication({ initialSnapshot, userEmail }: { initialSn
             onPlaceTug={placeTug}
             onMessage={(message) => notify(message, true)}
           />
-          <div className="board-footer"><span>{snapshot.warehouse.name}</span><span>Static layout locked • Logical plan 1600 × 900</span><span>Last sync {new Date(snapshot.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span></div>
+          <div className="board-footer"><span>{snapshot.warehouse.name}</span><span>Responsive landscape plan • 2000 × 900 view</span><span>Last sync {new Date(snapshot.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span></div>
         </section>
       </div>
 
