@@ -189,7 +189,9 @@ button { min-height: 44px; }
 .departure-countdown { margin: 13px 0 0; padding: 10px 12px; border-radius: 8px; background: #e7f1ff; color: #1f5eac; font-weight: 850; text-align: center; }
 .asset-actions { margin-top: 15px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .asset-actions button { min-height: 52px; padding: 7px; border: 1px solid #a9bac9; border-radius: 8px; background: #f7fafc; color: var(--navy-900); font-size: 12px; font-weight: 800; cursor: pointer; }
-.asset-actions .action-depart { border-color: #d48c29; color: #85520d; background: #fff7e7; }.asset-actions .action-replace { border-color: #5990ba; color: #174f7c; background: #eef7fe; }.asset-actions .action-remove { border-color: #d47d82; color: #9e1d24; background: #fff1f2; }
+.asset-actions .action-loading { border-color: #258957; color: white; background: #2fa765; box-shadow: 0 2px 5px rgba(28,104,65,.18); }
+.asset-actions .action-complete { border-color: #c96f13; color: white; background: #ef8d22; box-shadow: 0 2px 5px rgba(153,79,7,.18); }
+.asset-actions .action-depart { border-color: #2365b7; color: white; background: #2d78d5; box-shadow: 0 2px 5px rgba(25,78,148,.18); }.asset-actions .action-replace { border-color: #5990ba; color: #174f7c; background: #eef7fe; }.asset-actions .action-remove { border-color: #d47d82; color: #9e1d24; background: #fff1f2; }
 .asset-details { margin: 14px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }.asset-details > div { padding: 8px 10px; border-radius: 7px; background: #eef3f7; }.asset-details dt { color: var(--muted); font-size: 10px; text-transform: uppercase; }.asset-details dd { margin: 2px 0 0; color: var(--navy-900); font-weight: 750; }
 .destination-form { margin-top: 16px; }.destination-form > div { margin-top: 10px; display: flex; justify-content: flex-end; gap: 8px; }
 .history-drawer { width: min(520px, 94vw); height: 100dvh; overflow: auto; padding: 25px; background: white; box-shadow: -18px 0 50px rgba(0,20,42,.27); }

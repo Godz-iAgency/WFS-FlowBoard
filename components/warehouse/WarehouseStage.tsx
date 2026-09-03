@@ -194,15 +194,19 @@ function DockZone({ zone, truck, candidate, highlighting, highlighted, pulse, on
   onChoose: () => void;
 }) {
   const indicator = dockIndicatorColor(truck);
-  const targetStroke = candidate ? AVAILABLE : highlighting && !truck ? AVAILABLE : truck ? "#c0cad3" : "#9fadb9";
+  const hasStatusColor = Boolean(truck && truck.truck_status !== "NONE");
+  const targetStroke = candidate ? AVAILABLE : highlighting && !truck ? AVAILABLE : hasStatusColor ? indicator : truck ? "#c0cad3" : "#9fadb9";
   const targetWidth = logicalWidthToPresentation(162);
+  const gateColor = hasStatusColor ? indicator : GOLD;
+  const gateStroke = hasStatusColor ? indicator : "#8a6a00";
+  const targetFill = candidate ? AVAILABLE : hasStatusColor ? indicator : "#ffffff";
+  const targetFillOpacity = candidate ? 0.22 : hasStatusColor ? 0.24 : truck ? 0.08 : 0.2;
   return (
     <Group onMouseEnter={(event) => { if (!truck) setPointerCursor(event, "pointer"); }} onMouseLeave={(event) => setPointerCursor(event, "default")} onClick={(event) => { event.cancelBubble = true; if (!truck) onChoose(); }} onTap={(event) => { event.cancelBubble = true; if (!truck) onChoose(); }}>
       <Rect x={zone.x} y={zone.y} width={zone.width + logicalWidthToPresentation(176)} height={zone.height} stroke={highlighted ? SEARCH : "#c2ccd5"} strokeWidth={highlighted ? 5 : 1} fill="rgba(255,255,255,.30)" shadowColor={highlighted ? SEARCH : undefined} shadowBlur={highlighted ? (pulse ? 20 : 9) : 0} />
       <Rect x={zone.x + 12} y={zone.y + 14} width={58} height={30} fill={NAVY} cornerRadius={4} />
       <Text listening={false} x={zone.x + 12} y={zone.y + 20} width={58} text={zone.code.replace("DD", "DD ")} fill="white" fontSize={15} fontStyle="bold" align="center" />
-      <Rect listening={false} x={zone.x + zone.width - 8} y={zone.y + 5} width={14} height={zone.height - 10} fill={GOLD} stroke="#8a6a00" strokeWidth={1} cornerRadius={2} shadowColor="#927000" shadowBlur={2} />
-      <Rect listening={false} x={zone.x + zone.width + 7} y={zone.y + 10} width={6} height={zone.height - 20} fill={indicator} cornerRadius={2} />
+      <Rect listening={false} x={zone.x + zone.width - 8} y={zone.y + 5} width={14} height={zone.height - 10} fill={gateColor} stroke={gateStroke} strokeWidth={1} cornerRadius={2} shadowColor={gateColor} shadowBlur={2} />
       <Rect
         x={zone.x + zone.width + 16}
         y={zone.y + 5}
@@ -211,7 +215,8 @@ function DockZone({ zone, truck, candidate, highlighting, highlighted, pulse, on
         stroke={targetStroke}
         strokeWidth={candidate ? 4 : highlighting && !truck ? 2 : 1}
         dash={truck ? [] : [7, 5]}
-        fill={candidate ? "rgba(45,165,104,.22)" : truck ? "rgba(255,255,255,.08)" : "rgba(255,255,255,.20)"}
+        fill={targetFill}
+        fillOpacity={targetFillOpacity}
         cornerRadius={5}
         shadowColor={candidate ? AVAILABLE : undefined}
         shadowBlur={candidate ? 13 : 0}

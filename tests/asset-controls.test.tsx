@@ -103,4 +103,43 @@ describe("asset placement and manipulation controls", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
     expect(onRequestRemove).toHaveBeenCalledWith(baseAsset);
   });
+
+  it("matches every truck status action to its dock color", () => {
+    const truck = { ...baseAsset, asset_category: "TRUCK" as const, uld_type: null, truck_type: "BOX_TRUCK" as const, slot_id: null };
+    const onTruckStatus = vi.fn();
+    const onRequestDepart = vi.fn();
+    render(
+      <AssetActionSheet
+        asset={truck}
+        busy={false}
+        onClose={vi.fn()}
+        onRotate={vi.fn()}
+        onDestination={vi.fn()}
+        onTruckStatus={onTruckStatus}
+        onRequestDepart={onRequestDepart}
+        onRequestReplace={vi.fn()}
+        onRequestRemove={vi.fn()}
+        onRequestConnect={vi.fn()}
+        onDisconnect={vi.fn()}
+      />,
+    );
+
+    const loading = screen.getByRole("button", { name: "Loading" });
+    const unloading = screen.getByRole("button", { name: "Unloading" });
+    const complete = screen.getByRole("button", { name: "Complete" });
+    const depart = screen.getByRole("button", { name: "Depart" });
+    expect(loading).toHaveClass("action-loading");
+    expect(unloading).toHaveClass("action-loading");
+    expect(complete).toHaveClass("action-complete");
+    expect(depart).toHaveClass("action-depart");
+
+    fireEvent.click(loading);
+    fireEvent.click(unloading);
+    fireEvent.click(complete);
+    fireEvent.click(depart);
+    expect(onTruckStatus).toHaveBeenNthCalledWith(1, truck, "LOADING");
+    expect(onTruckStatus).toHaveBeenNthCalledWith(2, truck, "UNLOADING");
+    expect(onTruckStatus).toHaveBeenNthCalledWith(3, truck, "COMPLETE");
+    expect(onRequestDepart).toHaveBeenCalledWith(truck);
+  });
 });

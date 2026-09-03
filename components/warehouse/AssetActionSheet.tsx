@@ -81,9 +81,9 @@ export function AssetActionSheet({
           <button type="button" onClick={() => setShowDetails((shown) => !shown)}>{showDetails ? "Hide Details" : "Details"}</button>
           {asset.asset_category === "ULD" ? <button type="button" onClick={() => setEditingDestination(true)}>Destination</button> : null}
           {asset.asset_category === "ULD" ? <button type="button" onClick={() => onRotate(asset)} disabled={busy}>Change Direction</button> : null}
-          {asset.asset_category === "TRUCK" ? <button type="button" onClick={() => onTruckStatus(asset, "LOADING")} disabled={busy}>Loading</button> : null}
-          {asset.asset_category === "TRUCK" ? <button type="button" onClick={() => onTruckStatus(asset, "UNLOADING")} disabled={busy}>Unloading</button> : null}
-          {asset.asset_category === "TRUCK" ? <button type="button" onClick={() => onTruckStatus(asset, "COMPLETE")} disabled={busy}>Complete</button> : null}
+          {asset.asset_category === "TRUCK" ? <button type="button" className="action-loading" onClick={() => onTruckStatus(asset, "LOADING")} disabled={busy}>Loading</button> : null}
+          {asset.asset_category === "TRUCK" ? <button type="button" className="action-loading" onClick={() => onTruckStatus(asset, "UNLOADING")} disabled={busy}>Unloading</button> : null}
+          {asset.asset_category === "TRUCK" ? <button type="button" className="action-complete" onClick={() => onTruckStatus(asset, "COMPLETE")} disabled={busy}>Complete</button> : null}
           {asset.asset_category === "TRUCK" ? <button type="button" className="action-depart" onClick={() => onRequestDepart(asset)} disabled={busy}>Depart</button> : null}
           {asset.asset_category === "TUG" && !connection ? <button type="button" onClick={() => onRequestConnect(asset)} disabled={busy}>Connect ULD</button> : null}
           {asset.asset_category === "TUG" && connection ? <button type="button" onClick={() => onDisconnect(connection)} disabled={busy}>Disconnect</button> : null}
